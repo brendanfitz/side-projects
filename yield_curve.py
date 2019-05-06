@@ -57,8 +57,6 @@ def plot_yield_curve(df, dt_str):
     
 for col in df.columns.tolist()[1:]:
     plot_yield_curve(df, col)
-    
-plot_yield_curve(df, )
 
 
 curve_dts = ['2019-01-02', '2019-02-01', '2019-03-01', 
