@@ -23,7 +23,7 @@ def series_url(series_id, api_key, realtime_start, realtime_end):
     return url % {'series_id': series_id, 'api_key': api_key,
                   'realtime_start': realtime_start, 
                   'realtime_end': realtime_end}
-    
+
 url = series_url('FEDFUNDS', fred_api_key, '2019-04-01', '2019-04-30')
 json_text = requests.get(url).text
 json = json.loads(json_text)
