@@ -10,34 +10,33 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import itertools
+import fred_api as fred
 
-"""
-import requests
-import xml.etree.ElementTree as ET
-url = (r'https://www.treasury.gov/resource-center/data-chart-center'
-       r'/interest-rates/Datasets/yield.xml')
-xml = requests.get(url).text
-root = ET.fromstring(xml)
-node = (root.find('LIST_G_WEEK_OF_MONTH')
-        .find('G_WEEK_OF_MONTH')
-        .find('LIST_G_NEW_DATE'))
-cols_names = ['date', '1 mo', '2 mo', '3 mo', '6 mo', '1 yr', '2 yr', '3 yr',
-              '5 yr',  '7 yr', '10 yr', '20 yr', '30 yr']
-rows = list()
-for child in node:
-    row = list()
-    row.append(child.find('BID_CURVE_DATE').text)
-    for gchild in child.find('LIST_G_BC_CAT').find('G_BC_CAT'):
-        row.append(gchild.text)
-    rows.append(row)
-"""
-df = (pd.read_excel('yield_curve_data.xlsx')
-      .set_index('Date')
+series_ids = {'yield_rate_1mo': 'DGS1MO', 'yield_rate_3mo': 'DGS3MO', 
+              'yield_rate_6mo': 'DGS6MO', 'yield_rate_1yr': 'DGS1', 
+              'yield_rate_2yr': 'DGS2', 'yield_rate_3yr': 'DGS3', 
+              'yield_rate_4yr': 'DGS5', 'yield_rate_10yr': 'DGS10', 
+              'yield_rate_20yr': 'DGS20', 'yield_rate_30yr': 'DGS30'}
+
+def yield_df(series_id, col):
+    return (fred.fred_series(series_id, '2019-01-01', '2019-05-06')
+            .set_index('date')
+            .query('value != "."')
+            .assign(value=lambda x: x.value.astype('float64'))
+            .rename(columns={'value': col}))
+
+df = (fred.fred_series('DGS2MO', '2019-01-02', '2019-05-06')
+      .set_index('date'))
+
+frames = [yield_df(series_id, col) for col, series_id in series_ids.items()]
+
+df = (pd.concat(frames, axis=1)
       .T
       .reset_index()
       .rename(columns={'index': 'maturity'})
       .rename(columns=str)
-      .rename(columns=lambda x: x.replace(' 00:00:00', '')))
+      .rename(columns=lambda x: x.replace(' 00:00:00', ''))
+      .assign(maturity=lambda x: x.maturity.str.replace('yield_rate_', '')))
 
 f, axes = plt.subplots(4, 4, figsize=(14, 14), sharex=True, sharey=True)
 for i, ax_tup in enumerate(itertools.product(list(range(4)), list(range(4)))):
