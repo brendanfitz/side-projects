@@ -28,3 +28,14 @@ def fred_series(series_id, observation_start, observation_end):
     json_data = json.loads(response_text)
     return (pd.DataFrame(json_data['observations'])
             .drop(['realtime_start', 'realtime_end'], axis=1))
+    
+def fred_category(category_id=0):
+    url = (r'https://api.stlouisfed.org/fred/category/children?'
+           r'category_id=%(category_id)s&'
+           r'api_key=%(api_key)s&'
+           r'file_type=json'
+           ) % {'category_id': category_id, 'api_key': fred_api_key}
+    response_text = requests.get(url).text
+    json_data = json.loads(response_text)
+    json_data
+    return pd.DataFrame(json_data['categories']).set_index('id')
