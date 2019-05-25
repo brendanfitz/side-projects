@@ -27,7 +27,8 @@ def series(series_id, observation_start, observation_end):
     response_text = requests.get(url).text
     json_data = json.loads(response_text)
     return (pd.DataFrame(json_data['observations'])
-            .drop(['realtime_start', 'realtime_end'], axis=1))
+            .drop(['realtime_start', 'realtime_end'], axis=1)
+            .rename(columns={'value': series_id}))
     
 def category(category_id=0):
     url = (r'https://api.stlouisfed.org/fred/category/children?'
