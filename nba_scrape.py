@@ -102,6 +102,8 @@ def nba_stat_bar_plot(ax, metric):
            title='NBA Guards 2018-2019 %s' % metric.upper())
 
 f, axes = plt.subplots(2, 2, figsize=(25, 12.5))
+f.suptitle('All NBA Guards Stats', fontsize=24, va='center', ha='center',
+           x=0.5, y=0.9)
 sns.despine()
 stats = ['pts', 'apg', 'rpg', 'stpg']
 for stat in stats:
