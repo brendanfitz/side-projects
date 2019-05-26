@@ -44,3 +44,50 @@ ax = (df.loc[df.position.isin(['SG', 'PG']), ['player', 'pts']]
       .nlargest(15, 'pts')
       .pipe((sns.barplot, 'data'), x='pts', y='player', palette=palette))
 ax.set(xlabel='Points Per Game', ylabel='', title='NBA Guards 2018-2019 PPG')
+
+url = 'https://www.nba.com/history/awards/all-nba-team'
+response = requests.get(url)
+soup = BeautifulSoup(response.text, 'html.parser')
+
+
+def team_soup(soup, team_str):
+    return soup.find('strong', string=team_str).parent.parent.next_sibling
+
+
+all_nba = list()
+
+team_soup_html = team_soup(soup, 'FIRST TEAM')
+for i, player in enumerate(team_soup_html.stripped_strings):
+    if i % 2 == 1:
+        player_dict = dict()
+        player_dict['player'] = player.split(', ')[0]
+        player_dict['all_nba_team'] = 'first'
+        all_nba.append(player_dict)
+
+team_soup_html = team_soup(soup, 'SECOND TEAM')
+for i, player in enumerate(team_soup_html.stripped_strings):
+    if i % 2 == 1:
+        player_dict = dict()
+        player_dict['player'] = player.split(', ')[0]
+        player_dict['all_nba_team'] = 'second'
+        all_nba.append(player_dict)
+        
+team_soup_html = team_soup(soup, 'THIRD TEAM')
+for i, player in enumerate(team_soup_html.stripped_strings):
+    if i % 2 == 1:
+        player_dict = dict()
+        player_dict['player'] = player.split(', ')[0]
+        player_dict['all_nba_team'] = 'third'
+        all_nba.append(player_dict)
+        
+
+df_all_nba = (pd.DataFrame(all_nba)
+              .query('player != "Official release & voting totals"'))
+
+df = (pd.merge(df, df_all_nba, how='outer', on='player')
+      .assign(all_nba_team=lambda x: x.all_nba_team.fillna('N/A')))
+
+ax = (df.loc[df.position.isin(['SG', 'PG']), ['player', 'pts', 'all_nba_team']]
+      .nlargest(15, 'pts')
+      .pipe((sns.barplot, 'data'), x='pts', y='player', hue='all_nba_team'))
+ax.set(xlabel='Points Per Game', ylabel='', title='NBA Guards 2018-2019 PPG')
