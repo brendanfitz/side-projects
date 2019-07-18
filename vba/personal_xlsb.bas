@@ -10,10 +10,14 @@ End Sub
 
 Sub AddHeaderSheet()
 '
-' format_header_sheet Macro
+' AddHeaderSheet Macro
 '
 
 '
+
+    'Don't show any changes the macro does on the screen to make the macro faster.
+    Application.ScreenUpdating = False
+    
     Dim ws As Worksheet
     Set ws = Sheets.Add()
     ws.Activate
@@ -46,8 +50,14 @@ Sub AddHeaderSheet()
     End With
     ActiveCell.FormulaR1C1 = _
         "=MID(CELL(""filename"",R[-15]C),FIND(""]"",CELL(""filename"",R[-15]C))+1,255)"
+    
+    'Format and Name Sheet
     ActiveSheet.Tab.Color = RGB(0, 32, 96)
-    ws.Name = InputBox("Please enter a sheet name")
+    ws.Name = InputBox("Please enter a sheet name") & " -->"
+    
+    'Show all changes made to the workbook
+    Application.ScreenUpdating = True
+    
 End Sub
 
 Sub A1Save()
