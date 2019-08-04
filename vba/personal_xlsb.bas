@@ -6,6 +6,10 @@ Attribute StandardFormating.VB_ProcData.VB_Invoke_Func = " \n14"
 '
 
 '
+    Range("A1").EntireColumn.Insert
+    For I = 1 To 2
+        Range("A1").EntireRow.Insert
+    Next I
     Cells.Select
     Range("B1").Activate
     With Selection.Font
@@ -22,6 +26,7 @@ Attribute StandardFormating.VB_ProcData.VB_Invoke_Func = " \n14"
     End With
     With Selection.Font
         .Name = "Arial"
+        .Bold = True
         .Size = 9
         .Strikethrough = False
         .Superscript = False
