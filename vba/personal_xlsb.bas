@@ -1,34 +1,22 @@
 Attribute VB_Name = "Module1"
 Sub StandardFormating()
 Attribute StandardFormating.VB_ProcData.VB_Invoke_Func = " \n14"
-'
-' Standard Formating Macro
-'
-
-'
+    ' Insert rows and columns
     Range("A1").EntireColumn.Insert
-    For I = 1 To 2
+    Columns("A:A").Select
+    Selection.ColumnWidth = 1.25
+    For i = 1 To 2
         Range("A1").EntireRow.Insert
-    Next I
+    Next i
+    
+    ' Format all cells
     Cells.Select
     Range("B1").Activate
     With Selection.Font
         .Name = "Arial"
         .Strikethrough = False
-        .Superscript = False
-        .Subscript = False
-        .OutlineFont = False
-        .Shadow = False
-        .Underline = xlUnderlineStyleNone
-        .Color = -10477568
-        .TintAndShade = 0
-        .ThemeFont = xlThemeFontNone
-    End With
-    With Selection.Font
-        .Name = "Arial"
-        .Bold = True
+        .Bold = False
         .Size = 9
-        .Strikethrough = False
         .Superscript = False
         .Subscript = False
         .OutlineFont = False
@@ -45,12 +33,6 @@ Attribute StandardFormating.VB_ProcData.VB_Invoke_Func = " \n14"
         .TintAndShade = 0
         .PatternTintAndShade = 0
     End With
-    With Selection.Font
-        .Color = -10477568
-        .TintAndShade = 0
-    End With
-    Columns("A:A").Select
-    Selection.ColumnWidth = 1.25
     Range("B1").Select
     With Selection.Font
         .Name = "Arial"
