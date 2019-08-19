@@ -75,3 +75,70 @@ Sub A1Save()
     
     ActiveWorkbook.Save
 End Sub
+
+Sub FormatCols()
+'
+' FormatCols Macro
+'
+    Dim colName As String
+    For Each cel In Application.Selection
+        ' Replace underscores and Proper Case
+        colName = StrConv(Replace(cel.Value, "_", " "), vbProperCase)
+        ' ID (middle, end, only)
+        colName = Replace(colName, " Id ", " ID ")
+        If StrComp(Right(colName, 3), " Id") = 0 Then
+            colName = Left(colName, Len(colName) - 3) & Replace(colName, " Id", " ID", Len(colName) - 2)
+        End If
+        If StrComp(colName, "Id") = 0 Then
+            colName = "ID"
+        End If
+        ' Reassignment
+        cel.Value = colName
+    Next cel
+End Sub
+
+Sub AddHeaderSheet()
+    'Don't show any changes the macro does on the screen to make the macro faster.
+    Application.ScreenUpdating = False
+    
+    Dim ws As Worksheet
+    Set ws = Sheets.Add()
+    ws.Activate
+    Cells.Select
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+    With Selection.Font
+        .Name = "Arial"
+        .Size = 9
+        .Strikethrough = False
+        .Superscript = False
+        .Subscript = False
+        .OutlineFont = False
+        .Shadow = False
+        .Underline = xlUnderlineStyleNone
+        .Color = -10477568
+        .TintAndShade = 0
+        .ThemeFont = xlThemeFontNone
+    End With
+    Range("A16").Select
+    With Selection.Font
+        .Name = "Arial"
+        .Size = 36
+        .Bold = True
+    End With
+    ActiveCell.FormulaR1C1 = _
+        "=MID(CELL(""filename"",R[-15]C),FIND(""]"",CELL(""filename"",R[-15]C))+1,255)"
+    
+    'Format and Name Sheet
+    ActiveSheet.Tab.Color = RGB(0, 32, 96)
+    ws.Name = InputBox("Please enter a sheet name") & " -->"
+    
+    'Show all changes made to the workbook
+    Application.ScreenUpdating = True
+    
+End Sub
