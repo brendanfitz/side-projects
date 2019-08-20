@@ -84,18 +84,30 @@ Sub FormatCols()
     For Each cel In Application.Selection
         ' Replace underscores and Proper Case
         colName = StrConv(Replace(cel.Value, "_", " "), vbProperCase)
-        ' ID (middle, end, only)
-        colName = Replace(colName, " Id ", " ID ")
-        If StrComp(Right(colName, 3), " Id") = 0 Then
-            colName = Left(colName, Len(colName) - 3) & Replace(colName, " Id", " ID", Len(colName) - 2)
-        End If
-        If StrComp(colName, "Id") = 0 Then
-            colName = "ID"
-        End If
+        colName = CapitalizeSubString(colName, "Id")
+        colName = CapitalizeSubString(colName, "Dma")
         ' Reassignment
         cel.Value = colName
     Next cel
 End Sub
+
+Function CapitalizeSubString(s As String, t As String) As String
+    ' Beginning
+    If StrComp(Left(s, Len(t)), t) = 0 Then
+        s = UCase(t) & Right(s, Len(s) - Len(t))
+    End If
+    ' Middle
+    s = Replace(s, " " & t & " ", " " & UCase(t) & " ")
+    ' End
+    If StrComp(Right(s, Len(t) + 1), " " & t) = 0 Then
+        s = Left(s, Len(s) - Len(t)) & UCase(t)
+    End If
+    ' Full String Match
+    If StrComp(s, t) = 0 Then
+        s = UCase(t)
+    End If
+    CapitalizeSubString = s
+End Function
 
 Sub AddHeaderSheet()
     'Don't show any changes the macro does on the screen to make the macro faster.
