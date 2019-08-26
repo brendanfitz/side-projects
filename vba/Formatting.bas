@@ -22,7 +22,7 @@ Attribute StandardFormating.VB_ProcData.VB_Invoke_Func = " \n14"
         .OutlineFont = False
         .Shadow = False
         .Underline = xlUnderlineStyleNone
-        .Color = -10477568
+        .ColorIndex = xlAutomatic
         .TintAndShade = 0
         .ThemeFont = xlThemeFontNone
     End With
@@ -33,11 +33,14 @@ Attribute StandardFormating.VB_ProcData.VB_Invoke_Func = " \n14"
         .TintAndShade = 0
         .PatternTintAndShade = 0
     End With
+    
+    ' Format B1
     Range("B1").Select
     With Selection.Font
         .Name = "Arial"
-        .Size = 12
         .Strikethrough = False
+        .Bold = True
+        .Size = 14
         .Superscript = False
         .Subscript = False
         .OutlineFont = False
@@ -47,6 +50,9 @@ Attribute StandardFormating.VB_ProcData.VB_Invoke_Func = " \n14"
         .TintAndShade = 0
         .ThemeFont = xlThemeFontNone
     End With
+    
+    Selection.Formula = _
+        "=MID(CELL(""filename"", A1),FIND(""]"",CELL(""filename"", A1))+1,255)"
 End Sub
 
 Sub A1Save()
