@@ -56,20 +56,32 @@ def main():
             .set_index('team', append=True)
         )
         frames.append(df_team)
-     
+    
     df_teams = (pd.concat(frames)
         .assign(points=lambda x: points_calc(x.win, x.extra_time))
+        .assign(team_game_id=lambda x: x.groupby('team').cumcount() + 1,
+                total_points=lambda x: x.groupby('team')['points'].cumsum())
     )
-    df_teams['team_game_id'] = df_teams.groupby('team').cumcount() + 1
-    df_teams['total_points'] = df_teams.groupby('team')['points'].cumsum()
     
-    ds= dt.datetime.today().strftime('%y%m%d')
-    fout = os.path.join(
+    ds = dt.datetime.today().strftime('%y%m%d')
+    teams_fout = os.path.join(
         'data',
         f"nhl_results_{ds}.csv",
     )
-    df_teams.to_csv(fout)
-    print(f"NHL Point Data Scrape Successful!\nSee file located at {fout}")
+    df_teams.to_csv(teams_fout)
+    
+    df_team_games = (df_teams.reset_index()
+        .set_index(['team_game_id', 'team'])
+        .loc[:, 'total_points']
+        .unstack('team')
+    )
+    team_games_fout = os.path.join(
+        'data',
+        f"nhl_results_by_team_games_{ds}.csv",
+    )
+    df_team_games.to_csv(team_games_fout)
+    print("NHL Point Data Scrape Successful!"
+          f"\nSee files located at {teams_fout} & {team_games_fout}")
 
 def points_calc(win, extra_time):
     extra_time_loss = ~win & ~extra_time.isnull()
