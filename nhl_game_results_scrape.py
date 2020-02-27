@@ -7,6 +7,7 @@ Created on Wed Feb 26 15:23:27 2020
 """
 
 import os
+import json
 import numpy as np
 import pandas as pd
 import requests
@@ -76,11 +77,26 @@ def main():
         .rename(columns={'total_points': 'points'})
         .unstack('team')
     )
+
+    results = list()
+    for i, row in df_team_games.iterrows():
+        df_temp = pd.DataFrame(row).reset_index()
+        df_temp.columns = ['team', 'points']
+        team_points = df_temp.to_dict(orient='records')
+        [(lambda d: d.update({'game_number': i}) or d)(x) for x in team_points]
+        entry = {
+            'game_number': i,
+            'teams': team_points,
+        }
+        results.append(entry)
+
     team_games_fout = os.path.join(
         'data',
-        f"nhl_results_by_team_games_{ds}.csv",
+        f"nhl_results_by_team_games_{ds}.json",
     )
-    df_team_games.to_csv(team_games_fout)
+    with open(team_games_fout, 'w') as fout:
+        json.dump(results , fout, indent=4)
+        
     print("NHL Point Data Scrape Successful!"
           f"\nSee files located at {teams_fout} & {team_games_fout}")
 
