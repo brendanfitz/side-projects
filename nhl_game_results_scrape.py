@@ -73,6 +73,7 @@ def main():
     df_team_games = (df_teams.reset_index()
         .set_index(['team_game_id', 'team'])
         .loc[:, 'total_points']
+        .rename(columns={'total_points': 'points'})
         .unstack('team')
     )
     team_games_fout = os.path.join(
