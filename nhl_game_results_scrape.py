@@ -47,18 +47,17 @@ def main():
     df_full = create_df_full(df_teams)
     
     records = df_full_to_records(df_full)
-    
+        
     ds = dt.datetime.today().strftime('%y%m%d')
     teams_fout = os.path.join(
         'data',
-        f"nhl_results_{ds}.csv",
+        f"nhl_results_{ds}.json",
     )
     with open(teams_fout, 'w') as f:
         json.dump(records, f, indent=4)
        
     print("NHL Point Data Scrape Successful!"
           f"\nSee files located at {teams_fout}")
-
 
    
 def points_calc(win, extra_time):
@@ -116,12 +115,12 @@ def create_df_full(df_teams):
         .rename(columns={'total_points': 'points'})
     )
     df_merged = pd.DataFrame(index=index).merge(df_teams_temp, how='left', left_index=True, right_index=True)
-    df_merged[['games_played', 'points']] =  df_merged.groupby(['team']).ffill().fillna(0).drop('team', axis=1)
+    df_merged[['games_played', 'points']] = df_merged.groupby(['team']).ffill().fillna(0)
     return df_merged
 
 def df_full_to_records(df_full):
     records = list()
-    for date in df_full.index.get_level_values(level=0).to_list():
+    for date in df_full.index.get_level_values(level=0).unique().to_list():
         record = {
             'date': date.strftime('%Y-%m-%d'),
             'teams': df_full.xs(date).reset_index().to_dict(orient='records')
