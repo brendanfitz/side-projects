@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Feb 26 15:23:27 2020
-
 @author: BFitzpatrick
 """
 
@@ -15,36 +14,6 @@ import datetime as dt
 from bs4 import BeautifulSoup
 
 def main():
-    data = scrape_nhl_data()
-     
-    colmap = create_colmap()
-    df = (data.rename(columns=colmap)
-        .pipe(filter_unplayed_games)
-        .set_index('date', append=True)
-        .rename_axis(["game_id", "date"])
-        .assign(home_win=lambda x: (x.home_goals > x.away_goals),
-                away_win=lambda x: (x.home_goals < x.away_goals))
-    )
-        
-    df_teams = create_df_teams(df)
-    
-    ds = dt.datetime.today().strftime('%y%m%d')
-    teams_fout = os.path.join('data', f"nhl_results_{ds}.csv")
-    df_teams.to_csv(teams_fout)
-    
-    df_team_games = create_df_team_games(df_teams)
-    
-    results = create_results(df_team_games)
-
-    team_games_fout = os.path.join('data', f"nhl_results_by_game_{ds}.json")
-    with open(team_games_fout, 'w') as fout:
-        json.dump(results , fout, indent=4)
-        
-    print("NHL Point Data Scrape Successful!"
-          f"\nSee files located at {teams_fout} & {team_games_fout}")
-
-
-def scrape_nhl_data():
     url = 'https://www.hockey-reference.com/leagues/NHL_2020_games.html'
     response = requests.get(url)
     
@@ -52,10 +21,8 @@ def scrape_nhl_data():
     
     table = str(soup.find('table', {'id': 'games'}))
     df = pd.read_html(table)[0]
-    return df
-
-def create_colmap():
-    return {
+     
+    colmap = {
         'Date': 'date',
         'Visitor': 'away_team',
         'G': 'away_goals',
@@ -66,7 +33,34 @@ def create_colmap():
         'LOG': 'game_length',
         'Notes': 'notes',
     }
+    df = (df.rename(columns=colmap)
+        .assign(date=lambda x: pd.to_datetime(x.date))
+        .pipe(filter_unplayed_games)
+        .set_index('date', append=True)
+        .rename_axis(["game_id", "date"])
+        .assign(home_win=lambda x: (x.home_goals > x.away_goals),
+                away_win=lambda x: (x.home_goals < x.away_goals))
+    )
+        
+    df_teams = create_df_teams(df)
+    
+    df_full = create_df_full(df_teams)
+    
+    records = df_full_to_records(df_full)
+    
+    ds = dt.datetime.today().strftime('%y%m%d')
+    teams_fout = os.path.join(
+        'data',
+        f"nhl_results_{ds}.csv",
+    )
+    with open(teams_fout, 'w') as f:
+        json.dump(records, f, indent=4)
+       
+    print("NHL Point Data Scrape Successful!"
+          f"\nSee files located at {teams_fout}")
 
+
+   
 def points_calc(win, extra_time):
     extra_time_loss = ~win & ~extra_time.isnull()
     loss_points = np.where(extra_time_loss, 1, 0)
@@ -98,33 +92,42 @@ def create_df_teams(df):
     
     df_teams = (pd.concat(frames)
         .assign(points=lambda x: points_calc(x.win, x.extra_time))
+        .sort_values(by=['team', 'date'])
         .assign(team_game_id=lambda x: x.groupby('team').cumcount() + 1,
                 total_points=lambda x: x.groupby('team')['points'].cumsum())
     )
     return df_teams
 
-def create_df_team_games(df_teams):
-    df_team_games = (df_teams.reset_index()
-        .set_index(['team_game_id', 'team'])
-        .loc[:, 'total_points']
-        .rename(columns={'total_points': 'points'})
-        .unstack('team')
-    )
-    return df_team_games
+def create_index_from_interpolation(df_teams):
+    season_start = df_teams.index.get_level_values(1).min()
+    season_end = df_teams.index.get_level_values(1).max()
+    dates = pd.date_range(season_start, season_end, freq='D').to_list()
+    teams = df_teams.index.get_level_values(2).unique().to_list()
+    iterables = [dates, teams]
+    index = pd.MultiIndex.from_product(iterables, names=['date', 'team'])
+    return index
 
-def create_results(df_team_games):
-    results = list()
-    for i, row in df_team_games.iterrows():
-        df_temp = pd.DataFrame(row).reset_index()
-        df_temp.columns = ['team', 'points']
-        team_points = df_temp.to_dict(orient='records')
-        [(lambda d: d.update({'game_number': i}) or d)(x) for x in team_points]
-        entry = {
-            'game_number': i,
-            'teams': team_points,
+def create_df_full(df_teams):    
+    index = create_index_from_interpolation(df_teams)
+    df_teams_temp = (df_teams
+        .reset_index(level=0)
+        .rename(columns={'team_game_id': 'games_played'})
+        .loc[:, ['games_played', 'total_points']]
+        .rename(columns={'total_points': 'points'})
+    )
+    df_merged = pd.DataFrame(index=index).merge(df_teams_temp, how='left', left_index=True, right_index=True)
+    df_merged[['games_played', 'points']] =  df_merged.groupby(['team']).ffill().fillna(0).drop('team', axis=1)
+    return df_merged
+
+def df_full_to_records(df_full):
+    records = list()
+    for date in df_full.index.get_level_values(level=0).to_list():
+        record = {
+            'date': date.strftime('%Y-%m-%d'),
+            'teams': df_full.xs(date).reset_index().to_dict(orient='records')
         }
-        results.append(entry)
-    return results
+        records.append(record)
+    return records
 
 if __name__ == '__main__':
     main()
