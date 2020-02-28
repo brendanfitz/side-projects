@@ -74,7 +74,7 @@ def main():
     df_team_games = (df_teams.reset_index()
         .set_index(['team_game_id', 'team'])
         .loc[:, 'total_points']
-        .rename(columns={'total_points': 'points'})
+        .rename({'total_points': 'points'})
         .unstack('team')
     )
 
@@ -83,12 +83,14 @@ def main():
         df_temp = pd.DataFrame(row).reset_index()
         df_temp.columns = ['team', 'points']
         team_points = df_temp.to_dict(orient='records')
-        [(lambda d: d.update({'game_number': i}) or d)(x) for x in team_points]
+        [(lambda d: d.update({'game_number': i}) or d)(x) for x in team_points if isinstance(x['points'], np.nan)]
         entry = {
             'game_number': i,
             'teams': team_points,
         }
         results.append(entry)
+        
+    results[-1]
 
     team_games_fout = os.path.join(
         'data',
