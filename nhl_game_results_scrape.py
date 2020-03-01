@@ -46,6 +46,12 @@ def main():
     
     df_full = create_df_full(df_teams)
     
+    df_wildcard = create_df_wildcard(df_full)
+    
+    df_full = (df_full.join(df_wildcard)
+        .assign(wildcard=lambda x: x.wildcard.fillna('No'))
+    )
+    
     records = df_full_to_records(df_full)
         
     ds = dt.datetime.today().strftime('%y%m%d')
@@ -127,6 +133,42 @@ def df_full_to_records(df_full):
         }
         records.append(record)
     return records
+
+def df_wildcard_to_records(df_wildcard):
+    records = list()
+    for date in df_wildcard.index.get_level_values(level=0).unique().to_list():
+        record = {
+            'date': date.strftime('%Y-%m-%d'),
+            'teams': df_wildcard.xs(date).reset_index().to_dict(orient='records')
+        }
+        records.append(record)
+    return records
+
+
+def create_df_wildcard(df_full):
+    df = df_full.copy()
+    team_data = pd.read_csv(os.path.join('data', 'nhl_team_data.csv')).set_index('team')
+    df = df.join(team_data.drop('color', axis=1), how='left', on='team')
+    df = df.sort_values(by=['date', 'division', 'points'], ascending=[True, True, False])
+    
+    df['division_rank'] = (df.sort_values(by=['date', 'division', 'points'], ascending=[True, True, False])
+     .groupby(['date', 'division']).points.rank(method='first', ascending=False)
+    )
+    
+    mask = df.division_rank > 3
+    df_wildcard = df.loc[mask, ].copy()
+    df_wildcard = df_wildcard.sort_values(by=['date', 'conference', 'points'], ascending=[True, True, False])
+    df_wildcard['conference_rank'] = (df_wildcard.sort_values(by=['date', 'conference', 'points'], ascending=[True, True, False])
+     .groupby(['date', 'conference']).points.rank(method='first', ascending=False)
+    )
+    
+    mask = df_wildcard.conference_rank == 2
+    df_wildcard = (df_wildcard.loc[mask, ]
+     .drop(['games_played', 'division', 'division_rank', 'conference_rank', 'points'], axis=1)
+     .rename(columns={'conference': 'wildcard'})
+    )
+    return df_wildcard
+    
 
 if __name__ == '__main__':
     main()
