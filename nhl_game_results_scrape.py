@@ -134,16 +134,6 @@ def df_full_to_records(df_full):
         records.append(record)
     return records
 
-def df_wildcard_to_records(df_wildcard):
-    records = list()
-    for date in df_wildcard.index.get_level_values(level=0).unique().to_list():
-        record = {
-            'date': date.strftime('%Y-%m-%d'),
-            'teams': df_wildcard.xs(date).reset_index().to_dict(orient='records')
-        }
-        records.append(record)
-    return records
-
 
 def create_df_wildcard(df_full):
     df = df_full.copy()
