@@ -4,3 +4,4 @@ Data/*
 fred_config.py
 twitter_config.py
 boxrec_creds.json
+*-checkpoint.ipynb
