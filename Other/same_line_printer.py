@@ -6,7 +6,6 @@ Created on Tue Mar 17 15:46:27 2020
 """
 
 
-from tqdm import tqdm
 import sys
 import time
 
@@ -21,12 +20,12 @@ class SameLinePrinter:
         sys.stdout.flush()
         self.previous_line_length = len(line)
         
-        
 printer = SameLinePrinter()
-
-for i in range(1, 101):
-    time.sleep(1)
-    printer.print_line("Test: {:>3} / 100".format(i))
+for i in range(1, 11):
+    time.sleep(0.5)
+    printer.print_line("Test: {:>3} / 10".format(i))
     
-for i in tqdm(range(1, 101)):
-    time.sleep(1 if i % 2 == 0 else 2)
+from tqdm import tqdm
+
+for i in tqdm(range(1, 11)):
+    time.sleep(0.5)
