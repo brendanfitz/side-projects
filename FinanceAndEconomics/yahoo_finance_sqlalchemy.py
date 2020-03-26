@@ -6,8 +6,9 @@ Created on Thu Mar 26 13:09:46 2020
 """
 
 
-import datetime as dt
+import pandas as pd
 import sqlalchemy as db
+from tqdm import tqdm
 from connection_config import cc
 
 protocol = cc['protocol']
@@ -34,28 +35,15 @@ stock_prices = db.Table('stock_prices', metadata,
 
 metadata.create_all(engine)
 
-dummy_data = [
-        {
-         'ticker': '^GSPC',
-         'date': dt.date(2019, 1, 1),
-         'open': 1.0, 
-         'high': 3.0,
-         'low': 0.5,
-         'close': 2.0,
-         'adj_close': 2.1,
-         'volume': 100,
-        },
-        {
-         'ticker': '^GSPC',
-         'date': dt.date(2019, 1, 2),
-         'open': 1.0, 
-         'high': 3.0,
-         'low': 0.5,
-         'close': 2.0,
-         'adj_close': 2.1,
-         'volume': 100,
-        }
-]
+data = (pd.read_csv('^GSPC.csv')
+    .rename(columns=lambda x: x.lower().replace(' ', '_'))
+    .assign(
+            ticker='^GSPC',
+            date=lambda x: pd.to_datetime(x.date)
+            )
+    .to_dict('records')
+)   
 
-query = db.insert(stock_prices)
-result_proxy = conn.execute(query, dummy_data)
+for row in tqdm(data):
+    query = db.insert(stock_prices).values(**row) 
+    result_proxy = conn.execute(query)
