@@ -11,19 +11,14 @@ import sqlalchemy as db
 from tqdm import tqdm
 from connection_config import cc
 
-protocol = cc['protocol']
-username = cc['username']
-password = cc['password']
-host = cc['host']
-database = cc['database']
-
-engine = db.create_engine(f"{protocol}://{username}:{password}@{host}/{database}")
+db_url = db.engine.url.URL(**cc)
+engine = db.create_engine(db_url)
 conn = engine.connect()
 metadata = db.MetaData()
 
 stock_prices = db.Table('stock_prices', metadata,
-                        db.Column('ticker', db.String(255)),
-                        db.Column('date', db.Date()),
+                        db.Column('ticker', db.String(255), primary_key=True),
+                        db.Column('date', db.Date(), primary_key=True),
                         db.Column('open', db.Numeric()),
                         db.Column('high', db.Numeric()),
                         db.Column('low', db.Numeric()),
@@ -34,7 +29,7 @@ stock_prices = db.Table('stock_prices', metadata,
                         )
 
 metadata.create_all(engine)
-
+    
 data = (pd.read_csv('^GSPC.csv')
     .rename(columns=lambda x: x.lower().replace(' ', '_'))
     .assign(
@@ -47,3 +42,5 @@ data = (pd.read_csv('^GSPC.csv')
 for row in tqdm(data):
     query = db.insert(stock_prices).values(**row) 
     result_proxy = conn.execute(query)
+    
+conn.close()
