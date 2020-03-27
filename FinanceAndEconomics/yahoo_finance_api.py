@@ -14,13 +14,17 @@ import requests
 def calculate_epoch(date):
     return (date - dt.datetime(1970, 1, 1)).total_seconds()
 
+
 def create_url(ticker, start_date, end_date):
+    """
+    Returns data inclusive of both start_date and end_date
+    """
     domain = "https://finance.yahoo.com/"
     
     ticker_url_encoded = urllib.parse.quote(ticker)
     path = "quote/{}/history".format(ticker_url_encoded)
     
-    epoch_start = calculate_epoch(start_date + dt.timedelta(days=1))
+    epoch_start = calculate_epoch(start_date)
     epoch_end = calculate_epoch(end_date + dt.timedelta(days=1))
     qstr = ("?period1={:.0f}&period2={:.0f}&interval=1d&filter=history&frequency=1d"
             .format(epoch_start, epoch_end))
@@ -30,6 +34,9 @@ def create_url(ticker, start_date, end_date):
 
 
 def scrape_daily_stock_price_df(ticker, start_date, end_date):
+    """
+    Returns data inclusive of both start_date and end_date
+    """
     url = create_url(ticker, start_date, end_date)
 
     response = requests.get(url)
@@ -45,10 +52,9 @@ def scrape_daily_stock_price_df(ticker, start_date, end_date):
 
 """ future parameters """
 ticker = "^GSPC"
-start_date = dt.datetime(2020, 1, 1, 0, 0)
-end_date = dt.datetime(2020, 3, 23)
-df = scrape_daily_stock_price_df(ticker, start_date, end_date)
 
-df.assign()
+start_date = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+end_date = start_date
+df = scrape_daily_stock_price_df(ticker, start_date, end_date)
 
           
