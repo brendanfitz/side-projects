@@ -35,10 +35,7 @@ def main():
     
     """ future parameters """
     ticker = "^GSPC"
-    time_to_zeros = dict(hour=0, minute=0, second=0, microsecond=0)
-    start_date = dt.datetime.today().replace(**time_to_zeros)
-    end_date = start_date + dt.timedelta(days=1)
-    df = scrape_daily_stock_price_df(ticker, start_date, end_date)
+    df = scrape_daily_stock_price_df(ticker)
     
     data = df.to_dict('records')
     
@@ -52,10 +49,17 @@ def calculate_epoch(date):
     return (date - dt.datetime(1970, 1, 1)).total_seconds()
 
 
-def create_url(ticker, start_date, end_date):
+def create_url(ticker, start_date=None, end_date=None):
     """
     Returns data inclusive of both start_date and end_date
     """
+    if start_date is None:
+        time_to_zeros = dict(hour=0, minute=0, second=0, microsecond=0)
+        start_date = dt.datetime.today().replace(**time_to_zeros)
+        
+    if end_date is None:
+        end_date = start_date + dt.timedelta(days=1)
+        
     domain = "https://finance.yahoo.com/"
     
     ticker_url_encoded = urllib.parse.quote(ticker)
