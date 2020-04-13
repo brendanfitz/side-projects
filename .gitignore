@@ -6,3 +6,4 @@ twitter_config.py
 boxrec_creds.json
 *-checkpoint.ipynb
 connection_config.py
+aws_config.py
