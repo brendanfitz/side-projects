@@ -10,30 +10,21 @@ import io
 import numpy as np
 import pandas as pd
 
-filename = 'Berkshire Hathaway 10-Q - 20Q1.txt'
-#with open(filename, 'r') as f:
-#    lines = f.readlines()
-    
+   
 def line_clean(l):
     return l.replace(r'$ ', '').replace(' )', ')')
 
-f = io.open(filename, mode="r", encoding="utf-8")
-lines = f.read()
-lines = [line_clean(x) for x in lines.split('\n') if x != '']
-f.close()
+def read_file(filename):
+    f = io.open(filename, mode="r", encoding="utf-8")
+    lines = f.read()
+    lines = [line_clean(x) for x in lines.split('\n') if x != '']
+    f.close()
+    return lines
 
-l = lines[177]
+filename = 'Berkshire Hathaway 10-Q - 20Q1.txt'
+lines = read_file(filename)
 
-badtext = l
-encoded = badtext.encode('cp1252')
-goodtext = encoded.decode('utf-8')
-
-l8 = l.encode('utf8')
-repr(l), repr(l8)
-    
-lines_clean = []
-for l in lines:
-    
+def scrape_line(l):
     if totals_pat.search(l):
         match = totals_pat.search(l)
         
@@ -46,6 +37,12 @@ for l in lines:
         line_item = l
         current_q = np.nan
         last_q = np.nan
+    return line_item, current_q, last_q
+    
+lines_clean = []
+for l in lines:
+    
+    line_item, current_q, last_q = scrape_line(l)
     lines_clean.append({
         'line_item': line_item,
         'current_q': current_q,
