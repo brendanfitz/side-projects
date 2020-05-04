@@ -21,9 +21,6 @@ def read_file(filename):
     f.close()
     return lines
 
-filename = 'Berkshire Hathaway 10-Q - 20Q1.txt'
-lines = read_file(filename)
-
 def scrape_line(l):
     if totals_pat.search(l):
         match = totals_pat.search(l)
@@ -38,19 +35,26 @@ def scrape_line(l):
         current_q = np.nan
         last_q = np.nan
     return line_item, current_q, last_q
-    
-lines_clean = []
-for l in lines:
-    
-    line_item, current_q, last_q = scrape_line(l)
-    lines_clean.append({
-        'line_item': line_item,
-        'current_q': current_q,
-        'last_q': last_q,
-    })
 
-(pd.DataFrame(lines_clean)
-    .to_csv('berkshire10q.csv', index=False, encoding='cp1252')
-)
+
+def main():
+    filename = 'Berkshire Hathaway 10-Q - 20Q1.txt'
+    lines = read_file(filename)
+    
+    lines_clean = []
+    for l in lines:
+        line_item, current_q, last_q = scrape_line(l)
+        lines_clean.append({
+            'line_item': line_item,
+            'current_q': current_q,
+            'last_q': last_q,
+        })
+    
+    (pd.DataFrame(lines_clean)
+        .to_csv('berkshire10q.csv', index=False, encoding='cp1252')
+    )
+
+if __name__ == '__main__':
+    main()
 
 
