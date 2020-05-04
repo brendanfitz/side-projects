@@ -6,31 +6,54 @@ Created on Sat May  2 16:59:59 2020
 """
 
 import re
+import io
+import numpy as np
 import pandas as pd
 
-pat = re.compile('')
+filename = 'Berkshire Hathaway 10-Q - 20Q1.txt'
+#with open(filename, 'r') as f:
+#    lines = f.readlines()
+    
+def line_clean(l):
+    return l.replace(r'$ ', '').replace(' )', ')')
 
-with open('Berkshire Hathaway 10-Q - 20Q1.txt', 'r') as f:
-    lines = f.readlines()
+f = io.open(filename, mode="r", encoding="utf-8")
+lines = f.read()
+lines = [line_clean(x) for x in lines.split('\n') if x != '']
+f.close()
+
+l = lines[177]
+
+badtext = l
+encoded = badtext.encode('cp1252')
+goodtext = encoded.decode('utf-8')
+
+l8 = l.encode('utf8')
+repr(l), repr(l8)
     
 lines_clean = []
 for l in lines:
-    split = str.split(l.replace(r'$ ', ''))
-    if len(split) > 2:
-        current_q = split[-2]
-        last_q = split[-1]
-        line_item = ' '.join(split[:-2])
+    
+    if totals_pat.search(l):
+        match = totals_pat.search(l)
+        
+        start = match.start()
+        line_item = l[:start - 1]
+        
+        data = match.group('data')
+        current_q, last_q = data.split(' ', maxsplit=2)
     else:
-        line_item = ' '.join(split)
-        current_q = None,
-        last_q = None
+        line_item = l
+        current_q = np.nan
+        last_q = np.nan
     lines_clean.append({
         'line_item': line_item,
         'current_q': current_q,
         'last_q': last_q,
     })
-    
-pd.DataFrame(lines_clean).to_csv('berkshire10q.csv', index=False)
-    
+
+(pd.DataFrame(lines_clean)
+    .to_csv('berkshire10q.csv', index=False, encoding='cp1252')
+)
 
 
