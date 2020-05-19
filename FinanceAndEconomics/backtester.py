@@ -40,8 +40,6 @@ df = df.rename(columns={
     '4. close': 'Close',
 })
 
-df.RSI.min()
-
 df_rsi_lag = df.loc[:, ['RSI']].shift(1).rename(columns={'RSI': 'RSI_Lag'})
 df = df.join(df_rsi_lag)
 
