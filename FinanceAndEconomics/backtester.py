@@ -7,9 +7,12 @@ Created on Sun May 17 18:06:04 2020
 
 import pandas as pd
 from backtesting import Backtest
-from backtesting.lib import SignalStrategy
+from backtesting.lib import Strategy
 from alpha_vantage_test import alpha_vantage_query
+import numpy as np
 
+
+"""
 symbol = 'GPRO'
 interval = '5min'
 
@@ -38,30 +41,38 @@ df = df.rename(columns={
     '2. high': 'High', 
     '3. low':'Low', 
     '4. close': 'Close',
+    '5. volume': 'Volume',
 })
 
 df_rsi_lag = df.loc[:, ['RSI']].shift(1).rename(columns={'RSI': 'RSI_Lag'})
 df = df.join(df_rsi_lag)
 
-class RsiTrough(SignalStrategy):
-    
+df.drop('RSI_Lag', axis=1).to_csv('GPRO.csv')
+"""
+
+df = pd.read_csv('GPRO.csv', index_col=0, dtype={
+    'Open': np.dtype('float64'),
+    'High': np.dtype('float64'),
+    'Low': np.dtype('float64'),
+    'Close': np.dtype('float64'),
+    'Volume': np.dtype('float64'),
+    'RSI': np.dtype('float64'),
+    }, parse_dates=True)
+
+class RsiTrough(Strategy):
+
     def init(self):
-        # In init() and in next() it is important to call the
-        # super method to properly initialize all the classes
-        super().init()
-        
-        # Taking a first difference (`.diff()`) of a boolean
-        # series results in +1, 0, and -1 values. In our signal,
-        # as expected by SignalStrategy, +1 means buy,
-        # -1 means sell, and 0 means to hold whatever current
-        # position and wait. See the docs.
-        crossing_below_20 = ((self.data.RSI < 20) & (self.data.RSI > 20)).astype(int)
-        crossing_above_40 = ((self.data.RSI > 40) & (self.data.RSI < 40)).astype(int) * -1
-        signal = crossing_below_20 + crossing_above_40
-        
-        # Set the signal vector using the method provided
-        # by SignalStrategy
-        self.set_signal(signal)
+        self.rsi = self.data.RSI
+        self.in_trade = False
+
+    def next(self):
+        print(self.rsi[0], self.rsi[1])
+        if self.rsi[0] < 20 and self.rsi[1] > 20:
+            self.buy()
+            self.in_trade = True
+        elif self.in_trade and self.rsi[0] > 40:
+            self.sell()
+            self.in_trade = False
         
             
 
