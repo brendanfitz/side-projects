@@ -10,10 +10,10 @@ from urllib.parse import urlencode
 import requests
 import json
 from alpha_vantage_config import API_KEY
-from pandas.tseries.offsets import Minute
 
 BASE_URL = 'https://www.alphavantage.co/query?'
 
+ 
 def alpha_vantage_query(function, symbol, interval, **kwargs):
     params = dict()
     params['function'] = function
@@ -31,7 +31,7 @@ def alpha_vantage_query(function, symbol, interval, **kwargs):
         
         df = pd.DataFrame.from_dict(data[data_key], orient='index')
         df.index = pd.to_datetime(df.index, )
-        df = df.asfreq(freq='5min')
+        #df = df.asfreq(freq='5min')
     except:
         print(params)
         print(response.status_code, response.text)
@@ -39,12 +39,15 @@ def alpha_vantage_query(function, symbol, interval, **kwargs):
 
     return df
 
+"""
+from pandas.tseries.offsets import Minute
+
 
 symbol = 'AAPL'
 interval = '5min'
 
 kwargs = {
-    'outputsize': 'full',
+'outputsize': 'full',
 }
 df_price = alpha_vantage_query('TIME_SERIES_INTRADAY', symbol, interval, **kwargs)
 
@@ -61,9 +64,4 @@ df = df_price.join(df_vwap).join(df_bbands).sort_index()
 
 df.head()
 
-
-
-
-
-
-
+"""
