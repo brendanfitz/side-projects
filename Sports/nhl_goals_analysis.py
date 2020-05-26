@@ -91,17 +91,6 @@ plt.xticks(np.arange(1, df.years_played.max(), step=1))
 plt.legend()
 plt.show()
 
-sns.color_palette()[0]
-fig, axes = plt.subplots(2, 3, sharex=True, sharey=True)
-ax = plot_goals_per_player_by_season(df, None, ax=axes[0][0])
-ax = plot_goals_per_player_by_season(df, 1, ax=axes[0][1])
-ax = plot_goals_per_player_by_season(df, 3, ax=axes[0][2])
-ax = plot_goals_per_player_by_season(df, 5, ax=axes[1][0])
-ax = plot_goals_per_player_by_season(df, 7, ax=axes[1][1])
-ax = plot_goals_per_player_by_season(df, 9, ax=axes[1][2])
-plt.legend()
-plt.show()
-
 import statsmodels.formula.api as smf
 
 additional_cols = ['season_number', 'gamesPlayed', 'positionCode']
