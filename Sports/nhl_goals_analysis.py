@@ -61,9 +61,6 @@ def goals_per_player_by_season(input_df):
 
     """
     df = input_df.copy()
-    #players_per_season = df.groupby('season_number')['skaterFullName'].nunique()
-    #goals_per_season = df.groupby('season_number')['goals'].sum()
-    #df = goals_per_season.div(players_per_season).rename('goals_per_player').reset_index()
     df = df.groupby('season_number')['goals'].mean().reset_index(name='goals_per_player')
     return df
 
