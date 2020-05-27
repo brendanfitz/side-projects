@@ -6,14 +6,16 @@ Created on Thu May 21 12:55:12 2020
 """
 
 import os
+import numpy as np
 import math
 import pandas as pd
 
 filename = os.path.join('data', 'nhl_player_data_2000-2020.csv')
 df = pd.read_csv(filename)
 
-df.columns
-subsetcols = ['skaterFullName', 'seasonId', 'goals', 'gamesPlayed', 'positionCode']
+subsetcols = [
+    'skaterFullName', 'seasonId', 'goals', 'gamesPlayed', 'positionCode',
+]
 df = (df.loc[:, subsetcols]
  .sort_values(['skaterFullName', 'seasonId'])
 )
@@ -30,12 +32,14 @@ df.loc[:, 'years_played'] = (df.groupby('skaterFullName')
 )
 df = df.sort_values(['skaterFullName', 'season_number'])
 
-#import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.pyplot as plt
 sns.set_style("whitegrid")
 
-x = df.loc[:, ['skaterFullName', 'years_played']].drop_duplicates().years_played
+x = (df.loc[:, ['skaterFullName', 'years_played']]
+     .drop_duplicates()
+     .years_played
+    )
 sns.distplot(x)
 
 data = df.groupby('season_number', as_index=False)['goals'].sum()
@@ -77,8 +81,6 @@ def plot_goals_per_player_by_season(df, years_played, ax=None):
     return sns.lineplot('season_number', 'goals_per_player', label=label, data=data)
         
 """ Run all at once for same plot """
-import numpy as np
-
 ax = plot_goals_per_player_by_season(df, None)
 ax = plot_goals_per_player_by_season(df, 3)
 ax = plot_goals_per_player_by_season(df, 5)
