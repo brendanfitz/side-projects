@@ -11,6 +11,8 @@ import urllib.parse as up
 import json
 import copy
 import os
+import time
+from tqdm import tqdm
 
 url = ('https://api.nhle.com/stats/rest/en/skater/summary'
        '?isAggregate=false'
@@ -47,23 +49,43 @@ def generate_qstrobj(qstrobj, start, year):
     qstrobj['cayenneExp'][0] = qstrobj['cayenneExp'][0].format(year=year)
     return urlencode_wrapper(qstrobj)
 
-years = [str(x) + str(x+1) for x in range(2000, 2021, 1)]
-pagination = [0] + [x * 100 + 1 for x in range(1, 4)]
+years = [str(x) + str(x+1) for x in range(1990, 2020, 1)]
 frames = []
 
-for year in years:
-    for start in pagination:
+def get_total_players_in_year(year):
+    url = url_base + '?' + generate_qstrobj(qstrobj, 0, year)
+    response = requests.get(url)
+    data = json.loads(response.text)
+    total_players_in_year = data['total']
+    return total_players_in_year
+
+for year in tqdm(years):
+    total_per_year = get_total_players_in_year(year)
+    
+    start = 0
+    while start < total_per_year:
         url = url_base + '?' + generate_qstrobj(qstrobj, start, year)
         response = requests.get(url)
         data = json.loads(response.text)
         frames.append(pd.DataFrame.from_records(data['data']))
+        
+        start = start + 100
+        
+        time.sleep(3)
 
 df = pd.concat(frames)
 
-
-
-filename = os.path.join('data', 'nhl_player_data_2000-2020.csv')
+filename = os.path.join('data', 'nhl_player_data_1990-2020.csv')
 df.to_csv(filename, index=False)
+
+year = years[-1]
+start = 801
+url = url_base + '?' + generate_qstrobj(qstrobj, start, year)
+response = requests.get(url)
+data = json.loads(response.text)
+data['total']
+len(data['data'])
+frames.append(pd.DataFrame.from_records(data['data']))
 
 
 
