@@ -80,10 +80,12 @@ def plot_goals_per_player_by_season(df, years_played, ax=None):
     return sns.lineplot('season_number', 'goals_per_player', label=label, data=data)
         
 """ Run all at once for same plot """
-ax = plot_goals_per_player_by_season(df, None)
-for i in range(15):
+max_seasons = 15
+for i in range(2, max_seasons+1):
     ax = plot_goals_per_player_by_season(df, i)
-plt.xticks(np.arange(1, df.years_played.max(), step=1))
+sns.lineplot('season_number', 'goals_per_player', label="All", data=df.loc[df.years_played <= 15, ].pipe(goals_per_player_by_season))
+plt.xticks(np.arange(1, max_seasons+6, step=1))
+ax.set(title="Goals by Season", xlabel="Season Number", ylabel="Average Goals Per Player")
 plt.legend()
 plt.show()
 
@@ -244,6 +246,24 @@ X.loc[:, 'positionCode'] = X.loc[:, 'positionCode'].map(position_code_map)
 
 formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode) + penaltyMinutes_L1 + plusMinus_L1 + shootingPct_L1 + shots_L1'
            .format(l5_str))
+mod = smf.ols(formula, data=X)
+results = mod.fit()
+results.summary()
+
+
+"""
+9 Years Played
+"""
+
+df = df.loc[df.years_played == 9, ]
+
+X = create_X(5, additional_cols)
+position_code_map = {'D': 'D', 'C': 'F', 'R': 'F', 'L': 'F'}
+X.loc[:, 'positionCode'] = X.loc[:, 'positionCode'].map(position_code_map)
+
+formula = ('y ~ {} + season_number_squared + gamesPlayed + C(positionCode)'
+           .format(l5_str))
+X.loc[:, 'season_number_squared'] = X.season_number.pow(2)
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
