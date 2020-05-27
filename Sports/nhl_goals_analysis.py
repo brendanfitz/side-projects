@@ -30,6 +30,7 @@ df.loc[:, 'season_number'] = (df.groupby(['skaterFullName'])
 df.loc[:, 'years_played'] = (df.groupby('skaterFullName')
     ['season_number'].transform('max')
 )
+
 df = df.sort_values(['skaterFullName', 'season_number'])
 
 import seaborn as sns
@@ -51,21 +52,16 @@ def goals_per_player_by_season(input_df):
     """
     Parameters
     ----------
-    input_df : TYPE
-        DESCRIPTION.
+    input_df : dataframe with goals and season_number columns
 
     Returns
     -------
-    df : TYPE
-        DESCRIPTION.
-    
-    Updates Required
-    ----------
-    Need to divide each year by numbers of players
-
+    df : dataframe grouped by goals and season number
     """
     df = input_df.copy()
-    df = df.groupby('season_number')['goals'].mean().reset_index(name='goals_per_player')
+    df = (df.groupby('season_number')['goals'].mean()
+          .reset_index(name='goals_per_player')
+         )
     return df
 
 df.groupby('year_season_start')['goals'].mean()
