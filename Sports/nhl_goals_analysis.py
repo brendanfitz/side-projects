@@ -197,7 +197,7 @@ cols = [
     "predicted_goals",
     "mae",
 ]
-filename = os.path.join('data', 'nhl_player_goal_predictions.xlsx')
+filename = os.path.join('data', 'nhl_player_goal_predictions_1990-2019.xlsx')
 (df.join(y_pred)
     .join(X.drop(['y'] + additional_cols, axis=1))
     .assign(mae=lambda x: (x.goals - x.predicted_goals).abs())
