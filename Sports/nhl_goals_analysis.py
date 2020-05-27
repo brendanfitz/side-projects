@@ -200,7 +200,7 @@ row = pd.DataFrame({
         'L4': 18,
         'L5': 18,
         'season_number': 5,
-        'gamesPlayed': 70,
+        'gamesPlayed': 82,
         'positionCode': 'F'
     }, index=[0]
 )
