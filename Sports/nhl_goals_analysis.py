@@ -252,18 +252,29 @@ results.summary()
 
 
 """
-9 Years Played
+10 Years Played
 """
 
-df = df.loc[df.years_played == 9, ]
-
+df = df.loc[df.years_played == 10, ]
+additional_columns = ['season_number',
+ 'gamesPlayed',
+ 'positionCode',]
 X = create_X(5, additional_cols)
 position_code_map = {'D': 'D', 'C': 'F', 'R': 'F', 'L': 'F'}
 X.loc[:, 'positionCode'] = X.loc[:, 'positionCode'].map(position_code_map)
-
-formula = ('y ~ {} + season_number_squared + gamesPlayed + C(positionCode)'
-           .format(l5_str))
 X.loc[:, 'season_number_squared'] = X.season_number.pow(2)
+
+formula = ('y ~ L1 + L2 + L3 + L4 + L5 + season_number + season_number_squared + gamesPlayed + C(positionCode)'
+           .format(l5_str))
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
+
+X.loc[:, ['season_number', 'season_number_squared']].drop_duplicates().sort_values(by='season_number')
+
+
+"""
+We're only predicting players after they've had 5 years of experience.
+This makes the season_number coefficient negative because after 5 years, a player is usually on the second half of their 
+career, meaning they are on the downward side of the U-shape relationship between season number and goals.
+"""
