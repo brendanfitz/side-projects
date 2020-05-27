@@ -70,9 +70,9 @@ def goals_per_player_by_season(input_df):
 df.groupby('year_season_start')['goals'].mean()
 
 def plot_goals_per_player_by_season(df, years_played, ax=None):
-    label = "All Players" if years_played is None else "{} Years+".format(years_played)
+    label = "All Players" if years_played is None else "{} Years".format(years_played)
     if years_played:
-        mask = df.loc[:, 'years_played'] >= years_played
+        mask = df.loc[:, 'years_played'] == years_played
         df = df.loc[mask, :]
     data = df.pipe(goals_per_player_by_season)
     if ax:
@@ -81,10 +81,18 @@ def plot_goals_per_player_by_season(df, years_played, ax=None):
         
 """ Run all at once for same plot """
 ax = plot_goals_per_player_by_season(df, None)
-ax = plot_goals_per_player_by_season(df, 3)
-ax = plot_goals_per_player_by_season(df, 5)
-ax = plot_goals_per_player_by_season(df, 7)
-ax = plot_goals_per_player_by_season(df, 9)
+for i in range(15):
+    ax = plot_goals_per_player_by_season(df, i)
+plt.xticks(np.arange(1, df.years_played.max(), step=1))
+plt.legend()
+plt.show()
+
+
+df.season_number.value_counts()
+sns.countplot(df.season_number)
+
+ovi = df.loc[df.skaterFullName == 'Alex Ovechkin', ]
+ax = plot_goals_per_player_by_season(ovi, None)
 plt.xticks(np.arange(1, df.years_played.max(), step=1))
 plt.legend()
 plt.show()
