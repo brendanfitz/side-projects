@@ -10,11 +10,13 @@ import numpy as np
 import math
 import pandas as pd
 
-filename = os.path.join('data', 'nhl_player_data_2000-2020.csv')
+filename = os.path.join('data', 'nhl_player_data_1990-2020.csv')
 df = pd.read_csv(filename)
 
+
 subsetcols = [
-    'skaterFullName', 'seasonId', 'goals', 'gamesPlayed', 'positionCode',
+    'skaterFullName', 'seasonId', 'goals', 'gamesPlayed', 'positionCode', 
+    'penaltyMinutes', 'plusMinus', 'shootingPct', 'shots'
 ]
 df = (df.loc[:, subsetcols]
  .sort_values(['skaterFullName', 'seasonId'])
@@ -23,8 +25,9 @@ df = (df.loc[:, subsetcols]
 df.loc[:, 'year_season_start'] = df.seasonId.astype(str).str[:4].astype('int64')
 df.loc[:, 'year_season_end'] = df.seasonId.astype(str).str[4:].astype('int64')
 
-df.loc[:, 'season_number'] = (df.groupby(['skaterFullName'])
-    ['year_season_start'].rank()
+df.loc[:, 'season_number'] = (df.sort_values(['skaterFullName', 'seasonId'])
+    .groupby(['skaterFullName'])
+    ['year_season_start'].rank(method="first")
 )
 
 df.loc[:, 'years_played'] = (df.groupby('skaterFullName')
@@ -90,15 +93,23 @@ import statsmodels.formula.api as smf
 
 additional_cols = ['season_number', 'gamesPlayed', 'positionCode']
 
-def create_df(n, additional_cols):
+def create_lags(input_df, metric, n=5, include_metric_name_in_columns=False):
+    df = input_df.copy()
+    frames = [df.groupby('skaterFullName')[metric].shift(i) for i in range(n+1)]
+    if include_metric_name_in_columns:
+        keys = [metric] + [metric + '_L%s' % i for i in range(1, n+1)]
+    else:
+        keys = ['y'] + ['L%s' % i for i in range(1, n+1)]
+    df = (pd.concat(frames, axis=1, keys=keys)
+        .dropna()
+    )
+    return df
+
+def create_X(n, additional_cols):
     """
     Using this to avoid excessive dropping of na's
     """
-    frames = [df.groupby('skaterFullName').goals.shift(i) for i in range(n)]
-    keys = ['y'] + ['L%s' % i for i in range(1, n)]
-    X = (pd.concat(frames, axis=1, keys=keys)
-        .dropna()
-    )
+    X = create_lags(df, 'goals', n)
     
     X = X.join(df.loc[:, additional_cols])
     return X
@@ -106,13 +117,13 @@ def create_df(n, additional_cols):
 mask = df.loc[:, 'years_played'] >= 5
 df = df.loc[mask, :]
 
-X = create_df(6, additional_cols)
+X = create_X(5, additional_cols)
 
 model = smf.ols('y ~ L1 + L2 + L3 + L4 + L5', data=X)
 results = model.fit()
 results.summary()
 
-X = create_df(4, additional_cols)
+X = create_X(3, additional_cols)    
 
 mod = smf.ols('y ~ L1 + L2 + L3', data=X)
 results = mod.fit()
@@ -126,21 +137,21 @@ mod = smf.ols('y ~ L1 + L2 + L3 + season_number + gamesPlayed', data=X)
 results = mod.fit()
 results.summary()
 
-X.loc[:, 'season_number_squared'] = X.season_number.pow(2)
-formula = ('y ~ L1 + L2 + L3 + season_number + season_number_squared + '
-           'gamesPlayed')
-mod = smf.ols(formula, data=X)
-results = mod.fit()
-results.summary()
-X.drop('season_number_squared', axis=1)
-
-X = create_df(6, additional_cols)
+X = create_X(5, additional_cols)
 
 l5_str = 'L1 + L2 + L3 + L4 + L5'
 formula = 'y ~ {} + season_number + gamesPlayed'.format(l5_str)
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
+
+X.loc[:, 'season_number_squared'] = X.season_number.pow(2)
+formula = ('y ~ {} + season_number + season_number_squared + '
+           'gamesPlayed').format(l5_str)
+mod = smf.ols(formula, data=X)
+results = mod.fit()
+results.summary()
+X.drop('season_number_squared', axis=1) """ Ignore due to multi-collinearity """
 
 formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode)'
            .format(l5_str))
@@ -195,14 +206,36 @@ nhl_goals_mod = OLSResults.load(model_filename)
 
 row = pd.DataFrame({
         'L1': 17,
-        'L2': 18,
+        'L2': 20,
         'L3': 18,
         'L4': 18,
         'L5': 18,
-        'season_number': 5,
-        'gamesPlayed': 82,
-        'positionCode': 'F'
+        'season_number': 1,
+        'gamesPlayed': 50,
+        'positionCode': 'D'
     }, index=[0]
 )
-nhl_goals_mod = results.predict(row)[0]
+results.predict(row)[0]
 
+"""
+Additional lag test
+"""
+
+lagged_metrics = ['penaltyMinutes', 'plusMinus', 'shootingPct', 'shots',]
+lagged_dfs = [create_lags(df, x, 1, include_metric_name_in_columns=True).drop(x, axis=1) for x in lagged_metrics]
+
+for x in lagged_dfs:
+    df = df.join(x)
+    
+additional_cols = ['season_number', 'gamesPlayed', 'positionCode',
+                   'penaltyMinutes_L1', 'plusMinus_L1', 'shootingPct_L1', 'shots_L1'
+                   ]
+X = create_X(5, additional_cols)
+position_code_map = {'D': 'D', 'C': 'F', 'R': 'F', 'L': 'F'}
+X.loc[:, 'positionCode'] = X.loc[:, 'positionCode'].map(position_code_map)
+
+formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode) + penaltyMinutes_L1 + plusMinus_L1 + shootingPct_L1 + shots_L1'
+           .format(l5_str))
+mod = smf.ols(formula, data=X)
+results = mod.fit()
+results.summary()
