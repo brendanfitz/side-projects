@@ -181,7 +181,28 @@ cols = [
 filename = os.path.join('data', 'nhl_player_goal_predictions.xlsx')
 (df.join(y_pred)
     .join(X.drop(['y'] + additional_cols, axis=1))
-    .loc[:, cols]
     .assign(mae=lambda x: (x.goals - x.predicted_goals).abs())
+    .loc[:, cols]
     .to_excel(filename, index=False)
 )
+
+model_filename = os.path.join('data', 'nhl_goals_regression_model.pkl')
+results.save(model_filename)
+
+from statsmodels.regression.linear_model import OLSResults
+
+nhl_goals_mod = OLSResults.load(model_filename)
+
+row = pd.DataFrame({
+        'L1': 17,
+        'L2': 18,
+        'L3': 18,
+        'L4': 18,
+        'L5': 18,
+        'season_number': 5,
+        'gamesPlayed': 70,
+        'positionCode': 'F'
+    }, index=[0]
+)
+nhl_goals_mod = results.predict(row)[0]
+
