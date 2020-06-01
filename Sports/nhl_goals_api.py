@@ -49,7 +49,7 @@ def generate_qstrobj(qstrobj, start, year):
     qstrobj['cayenneExp'][0] = qstrobj['cayenneExp'][0].format(year=year)
     return urlencode_wrapper(qstrobj)
 
-years = [str(x) + str(x+1) for x in range(1990, 2020, 1)]
+years = [str(x) + str(x+1) for x in range(1917, 2020, 1)]
 frames = []
 
 def get_total_players_in_year(year):
@@ -75,7 +75,7 @@ for year in tqdm(years):
 
 df = pd.concat(frames)
 
-filename = os.path.join('data', 'nhl_player_data_1990-2020.csv')
+filename = os.path.join('data', 'nhl_player_data_{}-{}.csv'.format(years[0][:4], int(years[-1][:4]) + 1))
 df.to_csv(filename, index=False)
 
 year = years[-1]
