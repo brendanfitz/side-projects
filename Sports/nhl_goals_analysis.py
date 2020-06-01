@@ -13,10 +13,9 @@ import pandas as pd
 filename = os.path.join('data', 'nhl_player_data_1990-2020.csv')
 df = pd.read_csv(filename)
 
-
 subsetcols = [
     'skaterFullName', 'seasonId', 'goals', 'gamesPlayed', 'positionCode', 
-    'penaltyMinutes', 'plusMinus', 'shootingPct', 'shots'
+    'penaltyMinutes', 'plusMinus', 'shootingPct', 'shots', 'teamAbbrevs'
 ]
 df = (df.loc[:, subsetcols]
  .sort_values(['skaterFullName', 'seasonId'])
@@ -25,8 +24,7 @@ df = (df.loc[:, subsetcols]
 df.loc[:, 'year_season_start'] = df.seasonId.astype(str).str[:4].astype('int64')
 df.loc[:, 'year_season_end'] = df.seasonId.astype(str).str[4:].astype('int64')
 
-df.loc[:, 'season_number'] = (df.sort_values(['skaterFullName', 'seasonId'])
-    .groupby(['skaterFullName'])
+df.loc[:, 'season_number'] = (df.groupby(['skaterFullName'])
     ['year_season_start'].rank(method="first")
 )
 
@@ -99,7 +97,35 @@ plt.xticks(np.arange(1, df.years_played.max(), step=1))
 plt.legend()
 plt.show()
 
+mask = df.loc[:, 'years_played'] >= 5
+stats = (df
+ .loc[mask, ].groupby('positionCode')
+ .goals.agg(['mean', 'std', 'median'])
+ .T
+ .loc[:, ['L', 'C', 'R', 'D',]]
+)
+quantiles = (df
+ .loc[mask, ].groupby('positionCode')
+ .goals.quantile([0.25, 0.75,])
+ .unstack('positionCode')
+)
+pd.concat([stats, quantiles]).round(2)
+
+(df.groupby('positionCode')
+ .goals
+ .describe()
+ .round(2)
+ .T
+)
+
+x = 'shootingPct'
+y = 'goals'
+mask = (df.year_season_start == df.year_season_start.max()) & (df.shootingPct < 0.4)
+data = df.loc[mask, [x, y]]
+sns.scatterplot(x=x, y=y, data=data)
+
 import statsmodels.formula.api as smf
+from statsmodel_results_html import results_as_html
 
 additional_cols = ['season_number', 'gamesPlayed', 'positionCode']
 
@@ -132,20 +158,24 @@ X = create_X(5, additional_cols)
 model = smf.ols('y ~ L1 + L2 + L3 + L4 + L5', data=X)
 results = model.fit()
 results.summary()
+results_as_html(results, 'model1.html')
 
 X = create_X(3, additional_cols)    
 
 mod = smf.ols('y ~ L1 + L2 + L3', data=X)
 results = mod.fit()
 results.summary()
+results_as_html(results, 'model2.html')
 
 mod = smf.ols('y ~ L1 + L2 + L3 + season_number', data=X)
 results = mod.fit()
 results.summary()
+results_as_html(results, 'model3.html')
 
 mod = smf.ols('y ~ L1 + L2 + L3 + season_number + gamesPlayed', data=X)
 results = mod.fit()
 results.summary()
+results_as_html(results, 'model4.html')
 
 X = create_X(5, additional_cols)
 
@@ -154,6 +184,7 @@ formula = 'y ~ {} + season_number + gamesPlayed'.format(l5_str)
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
+results_as_html(results, 'model5.html')
 
 X.loc[:, 'season_number_squared'] = X.season_number.pow(2)
 formula = ('y ~ {} + season_number + season_number_squared + '
@@ -161,13 +192,15 @@ formula = ('y ~ {} + season_number + season_number_squared + '
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
-X.drop('season_number_squared', axis=1) """ Ignore due to multi-collinearity """
+results_as_html(results, 'model6.html')
+X = X.drop('season_number_squared', axis=1) # Ignore due to multi-collinearity
 
 formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode)'
            .format(l5_str))
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
+results_as_html(results, 'model7.html')
 
 position_code_map = {'D': 'D', 'C': 'F', 'R': 'F', 'L': 'F'}
 X.loc[:, 'positionCode'] = X.loc[:, 'positionCode'].map(position_code_map)
@@ -177,6 +210,7 @@ formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode)'
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
+results_as_html(results, 'model8.html')
 
 print("Root MSE (Total): {:0.2f}".format(math.sqrt(results.mse_total)))
 
@@ -199,6 +233,7 @@ cols = [
     "predicted_goals",
     "mae",
 ]
+
 filename = os.path.join('data', 'nhl_player_goal_predictions_1990-2019.xlsx')
 (df.join(y_pred)
     .join(X.drop(['y'] + additional_cols, axis=1))
@@ -228,6 +263,20 @@ row = pd.DataFrame({
 results.predict(row)[0]
 
 """
+Diagnostics
+"""
+residuals = X.loc[:, 'y'] - results.fittedvalues
+sns.scatterplot(X.loc[:, 'y'], residuals, hue=X.positionCode, alpha=0.4)
+
+import scipy as sp
+
+fig, ax = plt.subplots(figsize=(6,2.5))
+_, (__, ___, r) = sp.stats.probplot(residuals, plot=ax, fit=True)
+r**2
+
+sns.distplot(residuals)
+
+"""
 Additional lag test
 """
 
@@ -237,14 +286,21 @@ lagged_dfs = [create_lags(df, x, 1, include_metric_name_in_columns=True).drop(x,
 for x in lagged_dfs:
     df = df.join(x)
     
-additional_cols = ['season_number', 'gamesPlayed', 'positionCode',
-                   'penaltyMinutes_L1', 'plusMinus_L1', 'shootingPct_L1', 'shots_L1'
-                   ]
+additional_cols = [
+    'season_number', 'gamesPlayed', 'positionCode',
+    'penaltyMinutes_L1', 'plusMinus_L1', 'shootingPct_L1', 'shots_L1'
+]
 X = create_X(5, additional_cols)
 position_code_map = {'D': 'D', 'C': 'F', 'R': 'F', 'L': 'F'}
 X.loc[:, 'positionCode'] = X.loc[:, 'positionCode'].map(position_code_map)
 
 formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode) + penaltyMinutes_L1 + plusMinus_L1 + shootingPct_L1 + shots_L1'
+           .format(l5_str))
+mod = smf.ols(formula, data=X)
+results = mod.fit()
+results.summary()
+
+formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode) + penaltyMinutes_L1'
            .format(l5_str))
 mod = smf.ols(formula, data=X)
 results = mod.fit()
@@ -270,7 +326,10 @@ mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
 
-X.loc[:, ['season_number', 'season_number_squared']].drop_duplicates().sort_values(by='season_number')
+(X.loc[:, ['season_number', 'season_number_squared']]
+ .drop_duplicates()
+ .sort_values(by='season_number')
+)
 
 
 """
@@ -278,3 +337,42 @@ We're only predicting players after they've had 5 years of experience.
 This makes the season_number coefficient negative because after 5 years, a player is usually on the second half of their 
 career, meaning they are on the downward side of the U-shape relationship between season number and goals.
 """
+
+
+""" Output Mark Messier """
+columns = [
+    'skaterFullName',
+    'year_season_start',
+    'season_number',
+    'positionCode', 
+    'goals',
+    'gamesPlayed',
+]
+mask = df.loc[:, 'skaterFullName'] == 'Alex Ovechkin'
+filename = os.path.join('data', 'alexander_ovechkin.csv')
+(df.loc[mask, columns]
+ .sort_values('year_season_start')
+ .to_csv(filename, index=False)
+)
+
+
+"""
+Top goal scorers
+"""
+top_goal_scorers = (df.groupby('skaterFullName').goals.sum()
+                    .nlargest(50)
+                    .index
+                    .tolist()
+                    )
+columns = [
+    'skaterFullName',
+    'year_season_start',
+    'season_number',
+    'goals',
+    'gamesPlayed',
+]
+mask = df.skaterFullName.isin(top_goal_scorers)
+filename = os.path.join('data', 'top_50_goal_scorers.csv')
+(df.loc[mask, columns]
+ .to_csv(filename)
+)
