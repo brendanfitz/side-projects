@@ -13,16 +13,39 @@ import pandas as pd
 filename = os.path.join('data', 'nhl_player_data_1990-2020.csv')
 df = pd.read_csv(filename)
 
-subsetcols = [
-    'skaterFullName', 'seasonId', 'goals', 'gamesPlayed', 'positionCode', 
-    'penaltyMinutes', 'plusMinus', 'shootingPct', 'shots', 'teamAbbrevs'
-]
-df = (df.loc[:, subsetcols]
- .sort_values(['skaterFullName', 'seasonId'])
-)
-
 df.loc[:, 'year_season_start'] = df.seasonId.astype(str).str[:4].astype('int64')
 df.loc[:, 'year_season_end'] = df.seasonId.astype(str).str[4:].astype('int64')
+
+subsetcols = [
+    'skaterFullName', 'seasonId', 'goals', 'gamesPlayed', 'positionCode', 
+    'penaltyMinutes', 'plusMinus', 'shootingPct', 'shots', 'teamAbbrevs',
+    'year_season_start', 'year_season_end',
+]
+df = (df
+    .loc[:, subsetcols]
+    .drop_duplicates()
+)
+
+subset = ['skaterFullName', 'year_season_start']
+mask = df.duplicated(subset=subset, keep=False)
+(df
+ .loc[mask, subsetcols]
+ .sort_values(subset[::-1])
+ .to_csv('duplicates.csv')
+)
+
+subset = ['skaterFullName', 'year_season_start']
+mask = ~df.duplicated(subset=subset, keep='first')
+df = (df
+ .loc[mask, subsetcols]
+)
+
+df = (df
+    .set_index(['skaterFullName', 'year_season_start'], drop=False, verify_integrity=True)
+    .sort_index()
+)
+
+df.index = df.index.rename([x + '_idx' for x in list(df.index.names)])
 
 df.loc[:, 'season_number'] = (df.groupby(['skaterFullName'])
     ['year_season_start'].rank(method="first")
@@ -32,7 +55,6 @@ df.loc[:, 'years_played'] = (df.groupby('skaterFullName')
     ['season_number'].transform('max')
 )
 
-df = df.sort_values(['skaterFullName', 'season_number'])
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -48,6 +70,8 @@ data = df.groupby('season_number', as_index=False)['goals'].sum()
 sns.lineplot('season_number', 'goals', data=data)
 
 df.groupby('positionCode').goals.mean()
+df = df.assign(goals_per_game=lambda x: x.goals.div(x.gamesPlayed))
+df.groupby('positionCode').goals_per_game.mean() * 82
 
 def goals_per_player_by_season(input_df):
     """
@@ -68,7 +92,7 @@ def goals_per_player_by_season(input_df):
 df.groupby('year_season_start')['goals'].mean()
 
 def plot_goals_per_player_by_season(df, years_played, ax=None):
-    label = "All Players" if years_played is None else "{} Years".format(years_played)
+    label = "All Players" if years_played is None else "{} Years Played".format(years_played)
     if years_played:
         mask = df.loc[:, 'years_played'] == years_played
         df = df.loc[mask, :]
@@ -79,11 +103,11 @@ def plot_goals_per_player_by_season(df, years_played, ax=None):
         
 """ Run all at once for same plot """
 max_seasons = 15
-for i in range(2, max_seasons+1):
+for i in range(2, max_seasons+1, 2):
     ax = plot_goals_per_player_by_season(df, i)
 sns.lineplot('season_number', 'goals_per_player', label="All", data=df.loc[df.years_played <= 15, ].pipe(goals_per_player_by_season))
 plt.xticks(np.arange(1, max_seasons+6, step=1))
-ax.set(title="Goals by Season", xlabel="Season Number", ylabel="Average Goals Per Player")
+ax.set(title="Goals by Season Number and Years Played", xlabel="Season Number", ylabel="Average Goals Per Player")
 plt.legend()
 plt.show()
 
@@ -145,7 +169,7 @@ def create_X(n, additional_cols):
     """
     Using this to avoid excessive dropping of na's
     """
-    X = create_lags(df, 'goals', n)
+    X =     
     
     X = X.join(df.loc[:, additional_cols])
     return X
@@ -153,38 +177,33 @@ def create_X(n, additional_cols):
 mask = df.loc[:, 'years_played'] >= 5
 df = df.loc[mask, :]
 
-X = create_X(5, additional_cols)
-
-model = smf.ols('y ~ L1 + L2 + L3 + L4 + L5', data=X)
-results = model.fit()
-results.summary()
-results_as_html(results, 'model1.html')
-
 X = create_X(3, additional_cols)    
 
 mod = smf.ols('y ~ L1 + L2 + L3', data=X)
 results = mod.fit()
 results.summary()
-results_as_html(results, 'model2.html')
-
-mod = smf.ols('y ~ L1 + L2 + L3 + season_number', data=X)
-results = mod.fit()
-results.summary()
-results_as_html(results, 'model3.html')
-
-mod = smf.ols('y ~ L1 + L2 + L3 + season_number + gamesPlayed', data=X)
-results = mod.fit()
-results.summary()
-results_as_html(results, 'model4.html')
+results_as_html(results, 'model1.html', 'AR(3) Model Results')
 
 X = create_X(5, additional_cols)
+
+model = smf.ols('y ~ L1 + L2 + L3 + L4 + L5', data=X)
+results = model.fit()
+results.summary()
+results_as_html(results, 'model2.html', 'AR(5) Model Results')
+
+l5_str = 'L1 + L2 + L3 + L4 + L5'
+formula = 'y ~ {} + season_number'.format(l5_str)
+mod = smf.ols(formula, data=X)
+results = mod.fit()
+results.summary()
+results_as_html(results, 'model3.html', 'AR(5) w/ Season Number Model Results')
 
 l5_str = 'L1 + L2 + L3 + L4 + L5'
 formula = 'y ~ {} + season_number + gamesPlayed'.format(l5_str)
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
-results_as_html(results, 'model5.html')
+results_as_html(results, 'model4.html', 'AR(5) w/ Season Number & Games Played Model Results')
 
 X.loc[:, 'season_number_squared'] = X.season_number.pow(2)
 formula = ('y ~ {} + season_number + season_number_squared + '
@@ -192,15 +211,15 @@ formula = ('y ~ {} + season_number + season_number_squared + '
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
-results_as_html(results, 'model6.html')
+results_as_html(results, 'model5.html', 'AR(5) w/ Season Number Squared & Games Played Model Results')
 X = X.drop('season_number_squared', axis=1) # Ignore due to multi-collinearity
 
 formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode)'
            .format(l5_str))
-mod = smf.ols(formula, data=X)
+mod = smf.ols(formula, data=X) 
 results = mod.fit()
 results.summary()
-results_as_html(results, 'model7.html')
+results_as_html(results, 'model6.html', 'AR(5) w/ Season Number, Games Played & Position Code Model Results')
 
 position_code_map = {'D': 'D', 'C': 'F', 'R': 'F', 'L': 'F'}
 X.loc[:, 'positionCode'] = X.loc[:, 'positionCode'].map(position_code_map)
@@ -210,7 +229,7 @@ formula = ('y ~ {} + season_number + gamesPlayed + C(positionCode)'
 mod = smf.ols(formula, data=X)
 results = mod.fit()
 results.summary()
-results_as_html(results, 'model8.html')
+results_as_html(results, 'model7.html', 'AR(5) w/ Season Number, Games Played & Position Code (D vs F) Model Results')
 
 print("Root MSE (Total): {:0.2f}".format(math.sqrt(results.mse_total)))
 
@@ -265,7 +284,7 @@ results.predict(row)[0]
 """
 Diagnostics
 """
-residuals = X.loc[:, 'y'] - results.fittedvalues
+residuals = (X.loc[:, 'y'] - results.fittedvalues).rename('residuals')
 sns.scatterplot(X.loc[:, 'y'], residuals, hue=X.positionCode, alpha=0.4)
 
 import scipy as sp
@@ -275,6 +294,10 @@ _, (__, ___, r) = sp.stats.probplot(residuals, plot=ax, fit=True)
 r**2
 
 sns.distplot(residuals)
+
+X = pd.concat([X, residuals], axis=1)
+
+X.loc[X.y > 40, ]
 
 """
 Additional lag test
