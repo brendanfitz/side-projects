@@ -12,6 +12,11 @@ import pandas as pd
 filename = os.path.join('data', 'nhl_player_data_1917-2020.csv')
 data = pd.read_csv(filename)
 
+(data.assign(
+    decade=lambda x: x.year_season_start.apply(lambda x: 10 * round(x/10))
+    )
+  .groupby('decade').year_season_start.count()
+)
 
 def pre_proc(input_df):
     df = input_df.copy()
