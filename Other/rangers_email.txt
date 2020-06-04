@@ -1,0 +1,9 @@
+Hi Rangers Superfan!
+
+The Rangers play {{opponent}} tonight!
+
+Puck drop is scheduled for {{time}}.
+
+The Rangers are currently {{rangers_record}}. The {{opponent}} are currently {{opponent_record}}.
+
+Let's go Rangers!
