@@ -1,6 +1,6 @@
 Hi Rangers Superfan!
 
-The Rangers play {{opponent}} tonight!
+The Rangers play the {{opponent}} tonight!
 
 Puck drop is scheduled for {{time}}.
 
