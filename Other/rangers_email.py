@@ -88,7 +88,6 @@ def main(argv):
         opponent_record=team_records[opponent],
     )
     text = text_template.render(**template_kwargs)
-    print(text)
     html = html_template.render(**template_kwargs)
 
     # Turn these into plain/html MIMEText objects
