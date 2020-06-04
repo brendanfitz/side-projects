@@ -20,6 +20,7 @@ def scrape_rangers_schedule_df():
     url = 'https://www.hockey-reference.com/teams/NYR/2020_games.html'
     df = pd.read_html(url)[0]
 
+    """ filter out rows that are column header rows within the table """
     mask = df.loc[:, 'GP'] != 'GP'
     df = (df.loc[mask, ]
         .assign(Date=lambda x: pd.to_datetime(x.Date))
