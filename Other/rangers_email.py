@@ -1,8 +1,20 @@
+#!/home/bf2398/anaconda3/bin/python
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jun  3 20:17:11 2020
 
 @author: Brendan Non-Admin
+
+output before: -rw-rw-r-- 1 bf2398 bf2398   4682 Jun  5 12:38 rangers_email.py
+make script executable: chmod u+x rangers_email.py
+output after: -rwxrw-r-- 1 bf2398 bf2398   4682 Jun  5 12:38 rangers_email.py*
+crontab script: 0 8 * * cd /home/bf2398/Documents/Github/side_projects/Other/ && ./rangers_email.py -t
+
+check crontab history: grep CRON /var/log/syslog
+
+Jun  5 12:34:01 bf-x1-carbon CRON[18535]: (bf2398) CMD (cd /home/bf2398/Documents/Github/side_projects/Other/ && python rangers_email.py -t)
+Jun  5 12:34:01 bf-x1-carbon CRON[18534]: (CRON) info (No MTA installed, discarding output)
+Jun  5 12:35:01 bf-x1-carbon CRON[18655]: (bf2398) CMD (cd /home/bf2398/Documents/Github/side_projects/Other/ && ./rangers_email.py -t)
 """
 
 import argparse
@@ -13,6 +25,7 @@ from email_config import sender_email, sender_email_password, receiver_email
 from jinja2 import Template
 import pandas as pd
 import datetime as dt
+import logging
 
 _rangers = 'New York Rangers'
 
@@ -117,4 +130,10 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     argv = [__name__, args]
+
+    format_str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(filename='rangers_email.log',level=logging.DEBUG,
+                        format=format_str, filemode='w')
+    logger = logging.getLogger('logger')
+
     main(argv)
