@@ -6,3 +6,4 @@ twitter_config.py
 boxrec_creds.json
 *-checkpoint.ipynb
 *\_config.py
+*\.log
