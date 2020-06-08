@@ -72,9 +72,13 @@ def main(argv):
     args = argv[1]
     testing = args.testing
 
+    df = scrape_rangers_schedule_df()
+    game_data = filter_game_data(df, testing=testing)
+    if game_data is None:
+        return
+
     port = 465
     smtp_server = "smtp.gmail.com"
-
     message = MIMEMultipart("alternative")
     message["Subject"] = "Rangers Game Tonight!"
     message["From"] = sender_email
@@ -86,11 +90,6 @@ def main(argv):
     html_template_str = open('rangers_email.html').read()
     html_template = Template(html_template_str)
 
-    df = scrape_rangers_schedule_df()
-
-    game_data = filter_game_data(df, testing=testing)
-    if game_data is None:
-        return
     opponent = game_data['Opponent']
 
     team_records = scrape_team_data(opponent)
