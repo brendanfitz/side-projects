@@ -32,6 +32,27 @@ def authenticate():
     return access_token
 
 
+def scrape_elon_musk_tweets_premium_api(access_token, next_id):
+    request_headers = {
+        'Authorization': 'Bearer {}'.format(access_token),
+        #"Content-Type": "application/json",
+    }
+    request_params = {
+        'query': 'from:elonmusk lang:en',
+        #'query': 'snow OR cold OR blizzard',
+        #'count': 200,
+    }
+    if next_id:
+        request_params['next'] = next_id
+    
+    url = 'https://api.twitter.com/1.1/tweets/search/fullarchive/nlpanalysis.json'
+    response = requests.get(url, headers=request_headers, params=request_params)
+
+    json_data = response.json()
+    df = pd.DataFrame(json_data['results'])
+    
+    return df
+
 def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
     request_headers = {
         'Authorization': 'Bearer {}'.format(access_token)    
@@ -48,7 +69,7 @@ def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
     
     json_data = response.json()
     df = pd.DataFrame(json_data)
-    df
+    
     
     try:
         next_max_id = df.id.min() - 1
