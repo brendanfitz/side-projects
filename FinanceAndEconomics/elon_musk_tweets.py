@@ -38,6 +38,7 @@ def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
     request_params = {
         'screen_name': 'elonmusk',
         'count': 200,
+        'tweet_mode': 'extended'
     }
     if max_id:
         request_params['max_id'] = max_id
@@ -72,3 +73,15 @@ while True:
         break
     
 df = pd.concat(frames)
+
+#timeline_mask = df.in_reply_to_user_id.isna()
+#df = df.loc[timeline_mask, ]
+
+mask = df.full_text.str.contains('Tesla', case=False)
+df = df.loc[mask, :]
+
+df = df.assign(created_at=lambda x: pd.to_datetime(x.created_at))
+
+df.full_text.head()
+
+df.to_csv(r'Data/elon_musk_tweets.csv', index=False)
