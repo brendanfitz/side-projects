@@ -29,6 +29,7 @@ def authenticate():
     }
     auth_resp = requests.post(auth_url, headers=auth_headers, data=auth_data)
     access_token = auth_resp.json()['access_token']
+    
     return access_token
 
 def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
@@ -38,7 +39,7 @@ def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
     request_params = {
         'screen_name': 'elonmusk',
         'count': 200,
-        'tweet_mode': 'extended'
+        'tweet_mode': 'extended',
     }
     if max_id:
         request_params['max_id'] = max_id
