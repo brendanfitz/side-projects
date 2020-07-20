@@ -6,12 +6,22 @@ Created on Thu Jun 11 17:03:16 2020
 """
 
 import os
+import configparser
+
+config = configparser.ConfigParser()
+config.read(os.path.join(os.path.expanduser('~'), 'Documents', 'config.ini'))
+
+tc = config['twitter']
+
+
 import pandas as pd
 import requests
 import base64
 import json
-from twitter_config import tc
+# from twitter_config import tc
 import datetime as dt
+import urllib
+import json
 
 _base_url = r'https://api.twitter.com/'
 
@@ -32,22 +42,40 @@ def authenticate():
     
     return access_token
 
-def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
+def user_lookup(access_token, screen_name):
     request_headers = {
         'Authorization': 'Bearer {}'.format(access_token)    
     }
     request_params = {
-        'screen_name': 'elonmusk',
-        'count': 200,
-        'tweet_mode': 'extended',
+        'screen_name': screen_name,
+    }
+    url = 'https://api.twitter.com/1.1/users/lookup.json'
+    response = requests.get(url, headers=request_headers, params=request_params)
+
+    data = response.json()[0]
+    _id = data.get('id')
+    
+    return _id
+
+def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
+    headers = {
+        'Authorization': 'Bearer {}'.format(access_token),
+        'content-type': 'application/json'
+    }
+    data = {
+        "query":"from:elonmusk tesla", 
+        "fromDate": "202007010000", 
+        "toDate": "202007100000"
     }
     if max_id:
-        request_params['max_id'] = max_id
+        data['max_id'] = max_id
     
-    url = '{}1.1/statuses/user_timeline.json'.format(_base_url)
-    response = requests.get(url, headers=request_headers, params=request_params)
+    #data = '{"query": "from:elonmusk tesla", "fromDate": "202007010000", "toDate": "202007100000"}'
     
-    json_data = response.json()
+    url = 'https://api.twitter.com/1.1/tweets/search/fullarchive/nlpanalysis.json'
+    response = requests.post(url, data=json.dumps(data), headers=headers)
+    response.json()
+    
     df = pd.DataFrame(json_data)
     
     try:
@@ -86,3 +114,14 @@ df = df.assign(created_at=lambda x: pd.to_datetime(x.created_at))
 df.full_text.head()
 
 df.to_csv(r'Data/elon_musk_tweets.csv', index=False)
+
+
+endpoint = "https://api.twitter.com/1.1/tweets/search/fullarchive/nlpanalysis.json" 
+
+data = '{"query":"tesla from:bf2398", "fromDate": "201901010000", "toDate": "202004010000"}'
+
+data = '{"query":"tesla from:elonmusk", "fromDate": "201001010000", "toDate": "202004010000"}'
+response = requests.post(endpoint,data=data,headers=headers)
+response.json().get('results')
+
+response.request.body
