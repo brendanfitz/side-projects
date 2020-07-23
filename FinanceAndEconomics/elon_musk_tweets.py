@@ -74,7 +74,7 @@ def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
     
     url = 'https://api.twitter.com/1.1/tweets/search/fullarchive/nlpanalysis.json'
     response = requests.post(url, data=json.dumps(data), headers=headers)
-    response.json()
+    json_data = response.json()  
     
     df = pd.DataFrame(json_data)
     
