@@ -8,6 +8,7 @@ from PyPDF2 import PdfFileReader
 import re
 from collections import defaultdict
 import pandas as pd
+import numpy as np
 
 
 #############################################################################
@@ -40,7 +41,7 @@ income_statement_sections = [
     'COST OF REVENUES',
     'OPERATING EXPENSES',
 ]
-income_statement_data = defaultdict(dict)
+income_statement_data = {}
 
 pat = re.compile(r'\d')
 current_section = None
@@ -51,27 +52,24 @@ while i < len(lines):
     
     if line_item in income_statement_sections:
         current_section = line_item
+        income_statement_data[line_item] = [np.nan] * 5
         i = i + 1
     elif i + 1 < len(lines) and not pat.search(lines[i] + lines[i+1]):
         i = i + 1
+        income_statement_data[line_item] = [np.nan] * 5
     elif current_section:
-        income_statement_data[current_section][line_item] = lines[i+1:i+6]
+        income_statement_data[line_item] = lines[i+1:i+6]
         i = i + 6
     else:
         i = i + 1
+        income_statement_data[line_item] = [np.nan] * 5
                     
 ##############################################################################
 # convert to dataframe and output to csv
 ##############################################################################
 index = ['Q2-2019', 'Q3-2019', 'Q4-2019', 'Q1-2020', 'Q2-2020']
-frames = list()
-for k in income_statement_data.keys():
-    print()
-    df = (pd.DataFrame(income_statement_data[k], index=index)
-        .T
-    )
-    frames.append(df)
-    
-df = pd.concat(frames)
+df = (pd.DataFrame(income_statement_data, index=index)
+    .T
+)
 
 df.to_csv('tesla_income_statement.csv')
