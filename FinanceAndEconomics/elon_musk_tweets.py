@@ -23,6 +23,9 @@ import datetime as dt
 import urllib
 import json
 
+
+_strftime_fmt = '%Y%m%d%H%M'
+
 _base_url = r'https://api.twitter.com/'
 
 def authenticate():
@@ -57,71 +60,61 @@ def user_lookup(access_token, screen_name):
     
     return _id
 
-def scrape_elon_musk_tweets(access_token, max_id=None, tesla_tweets_only=False):
+def scrape_elon_musk_tweets(access_token, _next=None):
+    """    
+    Example Token String
+    --------------------
+    '{"query": "from:elonmusk tesla", "fromDate": "202007010000", "toDate": "202007100000"}'
+    """
     headers = {
         'Authorization': 'Bearer {}'.format(access_token),
         'content-type': 'application/json'
     }
-    data = {
-        "query":"from:elonmusk tesla", 
-        "fromDate": "202007010000", 
-        "toDate": "202007100000"
+    payload = {
+        "query": "from:elonmusk tesla", 
+        "maxResults": "100",
+        "fromDate": dt.datetime(2017, 1, 1).strftime(_strftime_fmt), 
+        "toDate": dt.date.today().strftime(_strftime_fmt),
     }
-    if max_id:
-        data['max_id'] = max_id
-    
-    #data = '{"query": "from:elonmusk tesla", "fromDate": "202007010000", "toDate": "202007100000"}'
-    
+    if _next:
+        payload['next'] = _next
+       
     url = 'https://api.twitter.com/1.1/tweets/search/fullarchive/nlpanalysis.json'
-    response = requests.post(url, data=json.dumps(data), headers=headers)
-    json_data = response.json()  
-    
-    df = pd.DataFrame(json_data)
-    
+    response = requests.post(url, data=json.dumps(payload), headers=headers)
+    response_data = response.json()
+          
     try:
-        next_max_id = df.id.min() - 1
+        df = (pd.DataFrame(response_data.get('results'))
+            .assign(
+                created_at=lambda x: pd.to_datetime(x.created_at),
+                screen_name=lambda x: x.user.apply(lambda x: x.get('screen_name'))
+            )
+        )
+        _next = response_data.get('next')
     except Exception as e:
-        print(request_params)
+        print(response_data)
         if 'errors' in df.columns.tolist():
             print(df.errors)
-        raise e        
+        raise e
     
-    if tesla_tweets_only:
-        mask = df.text.str.contains('Tesla')
-        df = df.loc[mask, :]
+    return df, _next
+
+
+def main():
+    access_token = authenticate()
     
-    return df, next_max_id
-
-frames = list()
-next_max_id = None
-access_token = authenticate()
-while True:
-    df, next_max_id = scrape_elon_musk_tweets(access_token, max_id=next_max_id)
-    frames.append(df)
-    if next_max_id is None:
-        break
+    frames = list()
+    _next = None
+    while True:
+        df, _next = scrape_elon_musk_tweets(access_token, _next)
+        frames.append(df)
+        if _next is None:
+            break
+        
+    df = pd.concat(frames)
+    filepath = r'Data/elon_musk_tweets.csv'
+    df.to_csv(filepath, index=False)
+    print(f"Success\n\nSee file located at '{filepath}'")
     
-df = pd.concat(frames)
-
-#timeline_mask = df.in_reply_to_user_id.isna()
-#df = df.loc[timeline_mask, ]
-
-mask = df.full_text.str.contains('Tesla', case=False)
-df = df.loc[mask, :]
-
-df = df.assign(created_at=lambda x: pd.to_datetime(x.created_at))
-
-df.full_text.head()
-
-df.to_csv(r'Data/elon_musk_tweets.csv', index=False)
-
-
-endpoint = "https://api.twitter.com/1.1/tweets/search/fullarchive/nlpanalysis.json" 
-
-data = '{"query":"tesla from:bf2398", "fromDate": "201901010000", "toDate": "202004010000"}'
-
-data = '{"query":"tesla from:elonmusk", "fromDate": "201001010000", "toDate": "202004010000"}'
-response = requests.post(endpoint,data=data,headers=headers)
-response.json().get('results')
-
-response.request.body
+if __name__ == '__main__':
+    main()
