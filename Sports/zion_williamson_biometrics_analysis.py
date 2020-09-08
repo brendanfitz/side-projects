@@ -29,7 +29,8 @@ with open(filepath, 'r') as f:
     )
     
 # sanity check for players per team (should be around 15)
-len(df) / 30
+players_estimate = len(df) / 30
+print(f"{players_estimate:0,.2f}")
 
 ##############################################################################
 # check all heights match pattern
@@ -49,15 +50,19 @@ ax.set(title='NBA Player BioMetrics')
 plt.show()
 
 ##############################################################################
-# z-score
+# multivariate normal pdf
 ##############################################################################
+from scipy.stats import multivariate_normal
+
 columns = ['Height (Inches)', 'Weight']
 X = df.loc[:, columns]
 
 mu = np.mean(X)
-std = np.cov(X.T)
+cov = np.cov(X.T)
 
-zscore = 2 * (1 - stats.multivariate_normal.cdf(X, mean=mu, cov=np.diag(std)))
+zion = df.loc['Zion Williamson', columns].values
+multivariate_normal.pdf(zion, mean=mu, cov=cov)
+
 
 ##############################################################################
 # Quartile deviation - interquartile range (1.5 * IQR)
@@ -73,9 +78,9 @@ height_scaler = StandardScaler()
 x = df.loc[:, ['Height (Inches)']]
 df.loc[:, 'height_scaled'] = height_scaler.fit_transform(x)
 
-weight_weight = StandardScaler()
+weight_scaler = StandardScaler()
 x = df.loc[:, ['Weight']]
-df.loc[:, 'weight_scaled'] = height_scaler.fit_transform(x)
+df.loc[:, 'weight_scaled'] = weight_scaler.fit_transform(x)
 
 df.plot.scatter(x='height_scaled', y='weight_scaled')
 
@@ -124,6 +129,43 @@ df.loc[mask, ['Height', 'Weight']]
 
 plot_kwargs = dict(
     x='Height (Inches)', y='Weight', hue='IsolationForest Results', data=df,
+    palette=sns.color_palette("RdBu", n_colors=2)[::-1]
+)
+ax = sns.scatterplot(**plot_kwargs)
+ax.set(title='NBA Player BioMetrics')
+plt.show()
+
+##############################################################################
+# PCA with z-score
+##############################################################################
+from sklearn.decomposition import PCA
+
+columns = ['height_scaled', 'weight_scaled']
+X = df.loc[:, columns]
+
+pca = PCA(n_components=1)
+pca.fit(X)
+
+X_trans = pca.transform(X)
+
+df.loc[:, 'Height-Weight PCA'] = X_trans
+
+a = df.loc[:, 'Height-Weight PCA']
+z_scores = stats.zscore(a)
+
+# 1.960 is 95% confidence interval for standard normal distribution
+# 2.576 is 99% confidence interval for standard normal distribution
+z_score_outliers = (np.abs(z_scores) >= 1.960) * 1
+
+df.loc[:, 'PCA Z-Score Results'] = (pd.Categorical(z_score_outliers)
+    .rename_categories({1: 'Outlier', 0: 'Core Data'})
+)
+
+mask = df.loc[:, 'PCA Z-Score Results'] == 'Outlier'
+sorted(df.loc[mask, :].index.tolist())
+
+plot_kwargs = dict(
+    x='Height (Inches)', y='Weight', hue='PCA Z-Score Results', data=df,
     palette=sns.color_palette("RdBu", n_colors=2)[::-1]
 )
 ax = sns.scatterplot(**plot_kwargs)
