@@ -50,26 +50,6 @@ ax.set(title='NBA Player BioMetrics')
 plt.show()
 
 ##############################################################################
-# multivariate normal pdf
-##############################################################################
-from scipy.stats import multivariate_normal
-
-columns = ['Height (Inches)', 'Weight']
-X = df.loc[:, columns]
-
-mu = np.mean(X)
-cov = np.cov(X.T)
-
-zion = df.loc['Zion Williamson', columns].values
-multivariate_normal.pdf(zion, mean=mu, cov=cov)
-
-
-##############################################################################
-# Quartile deviation - interquartile range (1.5 * IQR)
-##############################################################################
-
-
-##############################################################################
 # scaling
 ##############################################################################
 from sklearn.preprocessing import StandardScaler
@@ -101,7 +81,10 @@ mask = df.loc[:, 'DBSCAN Results'] == 'Outlier'
 df.loc[mask, ['Height', 'Weight']]
 
 plot_kwargs = dict(
-    x='Height (Inches)', y='Weight', hue='DBSCAN Results', data=df,
+    x='Height (Inches)',
+    y='Weight', 
+    hue='DBSCAN Results',
+    data=df,
     palette=sns.color_palette("RdBu", n_colors=2)[::-1]
 )
 ax = sns.scatterplot(**plot_kwargs)
@@ -161,6 +144,8 @@ df.loc[:, 'PCA Z-Score Results'] = (pd.Categorical(z_score_outliers)
     .rename_categories({1: 'Outlier', 0: 'Core Data'})
 )
 
+bool(0)
+
 mask = df.loc[:, 'PCA Z-Score Results'] == 'Outlier'
 sorted(df.loc[mask, :].index.tolist())
 
@@ -171,3 +156,26 @@ plot_kwargs = dict(
 ax = sns.scatterplot(**plot_kwargs)
 ax.set(title='NBA Player BioMetrics')
 plt.show()
+
+##############################################################################
+# Write to file
+##############################################################################
+
+columns = [
+    'Team',
+    'Age',
+    'Height',
+    'Weight',
+    'College',
+    'Country',
+    'Draft Year',
+    'Draft Round',
+    'Draft Number', 
+    'Height (Inches)',
+    'DBSCAN Results',
+    'IsolationForest Results', 
+    'Height-Weight PCA', 
+    'PCA Z-Score Results'
+]
+filename = path.join('data', 'nba_biometrics_analysis.csv')
+df.to_csv(filename)
