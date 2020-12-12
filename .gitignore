@@ -7,3 +7,6 @@ boxrec_creds.json
 *-checkpoint.ipynb
 *\_config.py
 *\.log
+*/venv/
+*/Program Data/
+workspace.code-workspace
