@@ -1,4 +1,4 @@
-from loader_app import App
+from caps_data_loader_app import App
 
 app = App()
 

@@ -14,27 +14,32 @@ import time
 import datetime as dt
 import warnings
 
-class CoordinateDemographicsDataLoader(object):
+class CAPsDataLoader(object):
 
-    executable_path = r'%s\Documents\chromedriver.exe' % os.path.expanduser('~')
+    EXECUTABLE_PATH = r'%s\Documents\chromedriver.exe' % os.path.expanduser('~')
     dl_dir = r'%s\Downloads' % os.path.expanduser('~')
+    URL = r'http://mcdc.missouri.edu/applications/capsACS.html'
 
-    def __init__(self, filename):
+    def __init__(self, filename, chromedriver_filename):
         self.filename = filename
-        self.browser = webdriver.Chrome(executable_path=self.executable_path)
+        if not os.path.isfile(self.EXECUTABLE_PATH):
+            raise FileNotFoundError()
+        self.browser = webdriver.Chrome(executable_path=chromedriver_filename)
 
-    def fetch_coodinate_data(self):
+    def fetch_data(self):
         df_cords = (pd.read_excel(self.filename, engine="openpyxl")
                     .drop_duplicates())
     
         coordinate_list = self.get_coordinate_list(df_cords)
         try:
             for coordinates in coordinate_list:
-                self.download_coordinate_file(coordinates)
+                self.download_caps_file(coordinates)
         finally:
-            self.compile_coordinate_files()
+            filename = self.compile_caps_files()
+            self.browser.close()
+            return filename
     
-    def compile_coordinate_files(self):
+    def compile_caps_files(self):
         csv_pat = re.compile(r'^capsACS.*\.csv$')
         files = [self.dl_dir + r'\%s' % x for x in os.listdir(self.dl_dir) if csv_pat.match(x)]
         df_scrape = (pd.concat([pd.read_csv(x) for x in files])
@@ -50,11 +55,12 @@ class CoordinateDemographicsDataLoader(object):
         for file in files:
             os.remove(file)
         print('See file located at {:s}'.format(out_fname))
+
+        return out_fname
     
-    def download_coordinate_file(self, coordinates):
+    def download_caps_file(self, coordinates):
         latitude, longitude, radius = coordinates
-        url = r'http://mcdc.missouri.edu/applications/capsACS.html'
-        self.browser.get(url)
+        self.browser.get(self.URL)
         (self.browser.find_element_by_xpath('//*[@id="latitude"]')
          .send_keys(str(latitude)))
         (self.browser.find_element_by_xpath('//*[@id="longitude"]')
@@ -94,5 +100,5 @@ class CoordinateDemographicsDataLoader(object):
 
 if __name__ == '__main__':
     filename = sys.argv[0]
-    loader = CoordinateDemographicsDataLoader(filename)
-    loader.fetch_coodinate_data()
+    loader = CAPsDataLoader(filename)
+    loader.fetch_caps_data()
