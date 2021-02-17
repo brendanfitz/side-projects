@@ -10,8 +10,10 @@ Let's run a t-test of his points in and out of the bubble to see if there was a 
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import t
+from hypothesis_testers import SingleMeanHypothesisTester
 
 filename = 'data/Damian Lillard 2019-20 Game Log _ Basketball-Reference.com.html'
 
@@ -20,77 +22,84 @@ tables = pd.read_html(filename)
 for table in tables:
     print(table.columns[:4])
 
-df_full = (pd.concat(tables[-2:], axis=0)
+data = (pd.concat(tables[-2:], axis=0)
     .query('Rk != "Rk"')
 )
+data.to_csv('data/damian_lillard_2020_stats.csv')
 
-df_full.iloc[:, 0:5].head()
+data.columns
 
-df_full.columns.tolist()
+data.iloc[:, 0:5].head()
 
-subset = ['Rk', 'G', 'Date', 'Opp', 'PTS']
-mask = df_full.loc[:, subset].isna().any(axis=1)
-df_full.loc[mask, subset]
+data.columns.tolist()
 
-df  = (df_full.loc[~mask, subset]
+subset = ['Rk', 'G', 'Date', 'Opp', 'PTS', 'AST', 'STL', 'TRB']
+mask = data.loc[:, 'GS'] == '1'
+data.loc[~mask, subset]
+
+df  = (data.loc[mask, subset]
     .astype({
         'Rk': 'int32', 
         'G': 'int32', 
         'Date': 'datetime64',
-        'PTS': 'int32'
+        'PTS': 'int32',
+        'AST': 'int32',
+        'STL': 'int32',
+        'TRB': 'int32',
+        
     })
-    .assign(bubble = lambda x: (x.Date >= '2020-04-01').astype('int32'))
+    .assign(
+        bubble=lambda x: (x.Date >= '2020-04-01').astype('int32'),
+        playoffs=lambda x: (x.Date >= '2020-08-17').astype('int32'),
+        bubble_reg_szn=lambda x: x.bubble * x.playoffs,
+        Bubble=lambda x: df.bubble.map({1: 'In', 0: 'Out'}),
+        Playoffs=lambda x: df.playoffs.map({1: 'Playoffs', 0: 'Regular Season'}),
+    )
 )
-
-calcs = (df.groupby('bubble')
-    .agg({
-        'PTS': ['mean', 'std', 'count']
-    })
-)
-
-pts_mean = calcs.loc[:, ('PTS', 'mean')]
-per_inc = (pts_mean[1] / pts_mean[0] - 1) * 1
-print(f"Percent Increase in Bubble: {per_inc:.2%}")
-
-n1, n2 = calcs.loc[:, ('PTS', 'count')]
-
-y_bar1, y_bar2 = calcs.loc[:, ('PTS', 'mean')]
-y_bar_diff = y_bar1 - y_bar2
-
-s1, s2 = calcs.loc[:, ('PTS', 'std')]
-
-degf = min(n1 - 1, n2 - 1)
-
-conf_level = 0.95
-perc_crit_value = conf_level + ((1 - conf_level)  / 2)
-
-t_star = t.ppf(perc_crit_value, degf)
-
-se = ((s1**2 / n1) + (s2**2 / n2))**(1/2)
-
-# ht
-t_stat = y_bar_diff / se
-p_value = t.cdf(-abs(t_stat), degf) * 2
-
-# ci
-margin_o_err = t_star * se
-ci = y_bar_diff + np.array([-1, 1]) * margin_o_err
-
-l, u = -3 * se, 3 * se
-x = np.arange(l, u, (u - l) / 1000)
-y= t.pdf(x, degf)
-
-ax = sns.lineplot(x, y)
-ax.vlines(t_stat, 0, max(y), colors='r', alpha=0.7, width=2)
-ax.axvspan(l, t_stat, alpha=0.3, color='red')
-
-
-
 df.to_csv('data/damian_lillard.csv', index=False)
 
-sns
+df.groupby('Bubble')[['PTS', 'AST', 'STL', 'TRB']].mean()
 
-g = sns.FacetGrid(df, row='bubble')
-g.map_dataframe(sns.distplot, x='PTS')
+dims = ['Playoffs', 'Bubble']
+measures = ['PTS', 'AST', 'STL', 'TRB']
+html = (df.groupby(dims)[measures].mean()
+    .applymap('{:,.1f}'.format)
+    .to_html(classes="table", border=0, justify="left")
+    .replace('class="dataframe ', 'class="')
+)
 
-sns.distplot(df.PTS, kde=False, hue=df.bubble)
+fout = 'data/lillard_summary_stats.html'
+with open(fout, 'w') as f:
+    f.write(html)
+    
+tester = SingleMeanHypothesisTester(df, 'bubble', 'PTS')
+tester.run_hypotheis_test()
+
+tester.conf_int()
+tester.test_visual(title="Damian Lillard's Regular Season vs Bubble Hypothesis Test")
+plt.show()
+
+# simulate under full season conditions
+tester.run_hypotheis_test(n1=82, n2=82)
+
+mask = df.loc[:, 'playoffs'] == 0
+df_reg_szn = df.loc[mask, :]
+tester = SingleMeanHypothesisTester(df_reg_szn, 'bubble', 'PTS')
+tester.run_hypotheis_test()
+# simulate under full season conditions
+tester.run_hypotheis_test(n1=82, n2=82)
+
+title = "Distribution of Lillard's Points Scored\n2019-2020 Regular Season"
+data = df_reg_szn.assign(Bubble=lambda x: x.bubble.map({1: "Yes", 0: "No"}))
+ax = sns.histplot(data, x='PTS', hue='Bubble')
+ax.set(title=title, xlabel="Points", ylabel="Game Counts")
+regszn_pts_avg, bubble_pts_avg = df_reg_szn.groupby('bubble').PTS.mean()
+plt.show()
+
+mask = (df.bubble == 0) & (df.playoffs == 0)
+s = df.loc[mask, 'PTS'].rolling(8).mean()
+s[s > 37].count()
+
+
+mask = (df.bubble == 1) & (df.playoffs == 0)
+df.loc[mask, ].shape
