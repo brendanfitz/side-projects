@@ -66,7 +66,7 @@ class SingleMeanHypothesisTester(object):
         self.margin_o_err = self.t_star * self.se
         self.ci = self.y_bar_diff + np.array([-1, 1]) * self.margin_o_err
         
-        return self.ci
+        return self.ci + self.y_bar1
 
     def create_test_stats_df(self):
         test_stats_data = [
@@ -127,3 +127,20 @@ class SingleMeanHypothesisTester(object):
             ha="right"
         )
         return ax
+    
+    def simulation(self, nsims=1000):
+        np.random.seed(11)
+        sims = np.empty(nsims)
+        y = self.data.loc[:, self.yname]
+        x = self.data.loc[:, self.xname]
+        n = len(y)
+        for i in range(nsims):
+            y_sim = y.sample(n, replace=True).values
+            y_sim_bar1, y_sim_bar2 = (pd.DataFrame(np.column_stack((x.values, y_sim)), columns=['bubble', 'PTS'])
+                .groupby('bubble')['PTS'].mean()
+            )
+            sims[i] = y_sim_bar2 - y_sim_bar1
+        
+        p_value = sum(sims >= self.y_bar_diff) / nsims
+        
+        return p_value, sims

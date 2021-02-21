@@ -74,7 +74,6 @@ with open(fout, 'w') as f:
     
 tester = SingleMeanHypothesisTester(df, 'bubble', 'PTS')
 tester.run_hypotheis_test()
-
 tester.conf_int()
 tester.test_visual(title="Damian Lillard's Regular Season vs Bubble Hypothesis Test")
 plt.show()
@@ -86,8 +85,29 @@ mask = df.loc[:, 'playoffs'] == 0
 df_reg_szn = df.loc[mask, :]
 tester = SingleMeanHypothesisTester(df_reg_szn, 'bubble', 'PTS')
 tester.run_hypotheis_test()
+tester.conf_int()
+tester.y_bar_diff, tester.se
+
+html = (tester.create_test_stats_df()
+    .rename(index={
+        'Sample 1': 'Sample 1 (Pre-Bubble)',
+        'Sample 2': 'Sample 2 (In-Bubble)'
+    })
+    .to_html(classes="table", border=0, justify="left")
+    .replace('class="dataframe ', 'class="')
+)
+fout = 'data/lillard_first_htest.html'
+with open(fout, 'w') as f:
+    f.write(html)
+
+tester.test_visual(title="Damian Lillard's Regular Season vs Bubble Hypothesis Test")
 # simulate under full season conditions
-tester.run_hypotheis_test(n1=82, n2=82)
+pvalue, sims = tester.simulation()
+pvalue
+
+ax = sns.histplot(sims)
+ax.vlines(x=tester.y_bar_diff, ymin=0, ymax=100, color='red', linestyle='dashed')
+ax.set(title="Damian Lillard's Regular Season vs Bubble Hypothesis Test\nSimulation Method")
 
 title = "Distribution of Lillard's Points Scored\n2019-2020 Regular Season"
 data = df_reg_szn.assign(Bubble=lambda x: x.bubble.map({1: "Yes", 0: "No"}))
@@ -103,3 +123,4 @@ s[s > 37].count()
 
 mask = (df.bubble == 1) & (df.playoffs == 0)
 df.loc[mask, ].shape
+tester.t_stat
