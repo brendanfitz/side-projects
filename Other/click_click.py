@@ -24,22 +24,24 @@ class App(tk.Frame):
     
     def click_start(self):
         self.running = True
-        self.start_button.config(relief='sunken')
-        self.stop_button.config(relief='raised')
+        self.start_button.config(relief='sunken', bg='green')
+        self.stop_button.config(relief='raised', bg='SystemButtonFace')
         self.count()
     
     def click_stop(self):
         self.running = False 
-        self.start_button.config(relief='raised')
-        self.stop_button.config(relief='sunken')
+        self.start_button.config(relief='raised', bg='SystemButtonFace')
+        self.stop_button.config(relief='sunken', bg='red')
 
     def create_timer_label(self):
-        self.timer_label = tk.Label(self, text="Press Start", fg="black", font="Verdana 30 bold")
-        self.timer_label.pack(padx=10, pady=10)
+        timer_label_frame = tk.Frame(self)
+        timer_label_frame.pack(padx=10, pady=10, expand=True, fill='both')
+        self.timer_label = tk.Label(timer_label_frame, text="Press Start", fg="black", font="Verdana 30 bold", anchor=tk.CENTER)
+        self.timer_label.pack(padx=10, pady=10, expand=True, fill='both')
     
     def create_button_frame(self):
         self.button_frame = tk.Frame(self.parent)
-        self.button_frame.pack(side="bottom")
+        self.button_frame.pack(side="bottom", expand=True)
     
     def create_start_button(self):
         self.start_button = tk.Button(self.button_frame, text="Start", command=self.click_start)
